@@ -129,7 +129,9 @@ def refresh(scene, *unused):
 def restore(*unused):
     if refresh not in bpy.app.handlers.frame_change_pre:
         bpy.app.handlers.frame_change_pre.append(refresh)
-    refresh(bpy.context.scene)
+    scene = getattr(bpy.context, "scene", None)     # absent while Blender is still starting up
+    if scene is not None:
+        refresh(scene)
 
 
 def register():

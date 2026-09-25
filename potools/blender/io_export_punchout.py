@@ -603,6 +603,9 @@ def material_color(mat):
                     return rc
                 c = inp.default_value
                 return (c[0], c[1], c[2])
+        rc = _po_ramp_color(mat)                    # TEV graph (no Principled): read the ramp
+        if rc is not None:
+            return rc
     if mat:
         c = mat.diffuse_color
         return (c[0], c[1], c[2])
@@ -639,7 +642,7 @@ def read_scene_buckets(armature, mesh_objs, resolve, fallback_hash, nearest_bone
     buckets = {}
     slot_color = {}
     stats = {"fallback_verts": 0, "dropped_groups": set(), "image_materials": set(),
-             "material_slots": set()}
+             "material_slots": set(), "untouched_slots": set()}
 
     def bucket(slot):
         if slot not in buckets:
@@ -705,6 +708,10 @@ def read_scene_buckets(armature, mesh_objs, resolve, fallback_hash, nearest_bone
                 # what ships. That is how a textured cap became a solid white one.
                 if base_color_is_image(m) or not po_shader.material_is_pristine(m):
                     stats["material_slots"].add(s)
+                elif m.get("po_record"):
+                    # An imported material nobody touched. Its textures are already right; the
+                    # bake would tint every one of them (detail, spec, ramp) to one flat colour.
+                    stats["untouched_slots"].add(s)
             local = {}
             for tri in mesh.loop_triangles:
                 slot = mat_slots[tri.material_index]
@@ -713,12 +720,15 @@ def read_scene_buckets(armature, mesh_objs, resolve, fallback_hash, nearest_bone
                 b = bucket(slot)
                 idx = []
                 for li, vi in zip(tri.loops, tri.vertices):
-                    key = (obj.name, vi, slot)
+                    # The game stores one UV per vertex, so a UV seam must split the vertex.
+                    # Keyed on the vertex alone, a seam you cut yourself kept whichever UV came
+                    # first and the faces along it smeared across the texture.
+                    u = tuple(uv[li].uv) if uv else (0.0, 0.0)
+                    key = (obj.name, vi, slot, round(u[0], 5), round(u[1], 5))
                     if key not in local:
                         v = mesh.vertices[vi]
                         co = obj.matrix_world @ v.co
                         no = (obj.matrix_world.to_3x3() @ vnormal.get(vi, v.normal)).normalized()
-                        u = tuple(uv[li].uv) if uv else (0.0, 0.0)
                         b["verts"].append([co.x, co.y, co.z])
                         b["normals"].append([no.x, no.y, no.z])
                         b["uvs"].append([u[0], 1.0 - u[1]])
@@ -1466,6 +1476,9 @@ def do_export(source_dict, out_dict, bake_colors=True, shade_floor=1.0, neutrali
     if bake_colors and bake_skip:
         report.append("colour bake skipped %d slot(s) whose material export writes real "
                       "textures: %s" % (len(bake_skip), sorted(bake_skip)[:12]))
+    # Untouched imported materials are never baked: there is no new colour to put in, and a
+    # flat tint over their detail/spec/ramp textures wiped skin, eyes and teeth to one grey.
+    bake_skip = bake_skip | (stats["untouched_slots"] - stats["material_slots"])
     if bake_colors and stats["image_materials"] and not materials_follow:
         im = sorted(stats["image_materials"])
         report.append(f"WARNING: {len(im)} material(s) are painted with an image but the colour "
@@ -2161,6 +2174,9 @@ class PO_OT_make_custom_material(bpy.types.Operator):
                     % (mat.name, self.slot, old.name, replaced))
         return {"FINISHED"}
 
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
 
 class PO_OT_claim_slot(bpy.types.Operator):
     """Give the active material a mesh slot of its own, with its own textures"""
@@ -2251,9 +2267,13 @@ def resolve_po_nodes(mat):
             out.setdefault(0, a if ta == "TEX_IMAGE" else b)
             break
 
+    # The exact-source LUT previews are viewport helpers, not texture slots. Left in the pool,
+    # the last-image fallback below adopted PO_RampTexture as the HDR map (slot 5) on every
+    # material without one, and the 512x1 LUT then crashed the CMPR encoder.
+    preview_only = {"PO_RampTexture", "PO_SpecRampTexture"}
     ramps = [n for n in nodes if getattr(n, "type", "") == "VALTORGB"]
     imgs = [n for n in nodes if getattr(n, "type", "") == "TEX_IMAGE"
-            and getattr(n, "image", None) is not None]
+            and getattr(n, "image", None) is not None and n.name not in preview_only]
 
     def driven_by_geometry(rampnode, depth=6):
         """rim ramp's Fac comes off the view/normal dot-product chain"""
@@ -2489,6 +2509,7 @@ def po_export_materials(obj, dict_path, out_path=None, prefix=None, ramp_size=(1
             _unmapped = [n.image.name for n in (mat.node_tree.nodes if mat.node_tree else [])
                          if getattr(n, 'type', '') == 'TEX_IMAGE'
                          and getattr(n, 'image', None) is not None
+                         and n.name not in ("PO_RampTexture", "PO_SpecRampTexture")
                          and n not in resolved.values()]
             if _unmapped:
                 ignored.append('%s: image node(s) %s are wired to no PO slot -- NOT exported'

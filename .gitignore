@@ -29,6 +29,7 @@ venv/
 
 # ── Generated images / third-party binaries ──
 *.png
+!docs/img/**/*.png
 *.gif
 *.exe
 
