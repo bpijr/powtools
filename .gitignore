@@ -1,0 +1,39 @@
+# ── Extracted game / disc data — NOT tracked (bring your own dump) ──
+DATA/
+_sys/
+UPDATE/
+HomeButton2/
+ini/
+materials/
+opening.bnr
+__update.inf
+*.iso
+*.rvz
+*.wbfs
+*.wad
+*.data
+*.dict
+*.debug
+*.bnk
+*.wem
+
+art/*
+!art/README.md
+
+# ── Python ──
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# ── Generated images / third-party binaries ──
+*.png
+*.gif
+*.exe
+
+# ── Editor / OS ──
+.DS_Store
+Thumbs.db
+*.swp
+.idea/

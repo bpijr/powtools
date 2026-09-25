@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Dolphin Riivolution patch for Punch-Out!! Wii (PAL R7PP01).
+     Loads modified character files from an external folder so you NEVER rebuild the ISO.
+     Replace a file and reload the game to see the change.
+
+     SETUP:
+       1. Put this XML in:  Documents\Dolphin Emulator\Load\Riivolution\punchout_mods.xml
+       2. Next to it, make a folder:  Documents\Dolphin Emulator\Load\Riivolution\po_mod\
+          and inside it recreate the path:  po_mod\art\characters\
+          Drop your modified <fighter>.dict + <fighter>.data there.
+       3. In Dolphin: right-click Punch-Out -> "Start With Riivolution Patches..." ->
+          enable "Character Files" -> Save as Preset -> launch.
+     To try a new build: replace the two files in po_mod\art\characters\ and reload the game. -->
+<wiidisc version="1">
+  <id game="R7PP01"/>
+  <options>
+    <section name="Punch-Out Modding">
+      <option name="Character Files" default="1">
+        <choice name="Enabled">
+          <patch id="charmod"/>
+        </choice>
+      </option>
+    </section>
+  </options>
+  <patch id="charmod">
+    <folder external="po_mod/art" disc="/art" recursive="true" create="false"/>
+  </patch>
+</wiidisc>

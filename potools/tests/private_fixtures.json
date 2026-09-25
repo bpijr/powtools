@@ -1,0 +1,329 @@
+{
+  "format": "po-private-fixtures",
+  "version": 1,
+  "notice": "Paths, sizes and hashes only. Supply your own dump; never commit game files.",
+  "fixtures": [
+    {
+      "role": "fighter",
+      "path": "characters/glassjoe.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "744516e6ce174ce9e27f231e55dfb09438ae8da2a3bff72a27a334c3d47cb7f1"
+        },
+        "data": {
+          "bytes": 1720476,
+          "sha256": "72e8c927e2b70005734c055c1a648a058feb08d80427abe8d32e3574a6aae233"
+        }
+      }
+    },
+    {
+      "role": "fighter (repository example)",
+      "path": "characters/bearhugger.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "7c11d4457e53de73ec59231956ac2a2ae4c276d8bc83779382ac01518ac5fbec"
+        },
+        "data": {
+          "bytes": 1538464,
+          "sha256": "086ecd2df07410fda1b953fcc210a9985472286830684934c3d881f27c883352"
+        }
+      }
+    },
+    {
+      "role": "non-fighter skeletal character",
+      "path": "characters/referee.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "55d20ccaf2993acad869fb972de93e34f41e1e0ccf406353e217906472385ac7"
+        },
+        "data": {
+          "bytes": 1014936,
+          "sha256": "0a6a96a3e92aff7505408693ea3ae82da036af3a7e8c8f334014631f0cbe5624"
+        }
+      }
+    },
+    {
+      "role": "non-fighter skeletal character (two models)",
+      "path": "characters/doc.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "c4d45e91fe5d2cae874e433aa2938a141a11f37c3a3129e530d6109328ffa36e"
+        },
+        "data": {
+          "bytes": 2383100,
+          "sha256": "1b89afce4397c438a98c7dbf21e04515766a2d71f7e820ea14abccd932f389e1"
+        }
+      }
+    },
+    {
+      "role": "crowd model",
+      "path": "characters/crowd_light_1.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "5a3baa25943f7c5bb76d893c4f900c1e942c4c36c9cc64ffb26bec20a1f83ba6"
+        },
+        "data": {
+          "bytes": 49356,
+          "sha256": "eacf0f25eddd7291dbdc03ecbfa0c7c14517d5a4b185d2c4fe169d9c5c97c8b9"
+        }
+      }
+    },
+    {
+      "role": "prop",
+      "path": "characters/vs_microphone.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "b74cf8cf0843498e977a2fad00e12afbb280b9a343a6444db4c1ee0a007b8dbe"
+        },
+        "data": {
+          "bytes": 89036,
+          "sha256": "5381435acbb4ed4b6746312b2de416f28180ad68bebb200cbc50ca1c7f86065d"
+        }
+      }
+    },
+    {
+      "role": "belt",
+      "path": "characters/minorbelt.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "d9e2b927724436ae9a76078ac42bf8d1e5d447659a40887a922486b144effc41"
+        },
+        "data": {
+          "bytes": 124204,
+          "sha256": "fbed9b53381ae8bb04b136f79f272318eafe2e0ee48839681660e8b3a5985c3f"
+        }
+      }
+    },
+    {
+      "role": "animated rope",
+      "path": "characters/ropes.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "f9fa7fb5b4bb3f58806801df42b25c460179ffbfff2dbffc8becab444eb1b330"
+        },
+        "data": {
+          "bytes": 220940,
+          "sha256": "6160c91dada6cf826ab7e1d20558e920a742d7253658fb91db93157f7e27d6ba"
+        }
+      }
+    },
+    {
+      "role": "low-poly rope",
+      "path": "characters/ropes_lp.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "89e7d968c3c72e0e4c481a4cc09ad3a587f72f5ab6b5e2e18582e62070c277d9"
+        },
+        "data": {
+          "bytes": 23164,
+          "sha256": "83cf7055be3e7651d306fb3d6794d3114639fd15dab6c2231318cb8048b7568c"
+        }
+      }
+    },
+    {
+      "role": "frontend ring",
+      "path": "environments/feminor/gameworld.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "70b1704a83bf9e505b477714eb3b388c0020639e8740e14309a7fd0ab0694f0b"
+        },
+        "data": {
+          "bytes": 2336960,
+          "sha256": "0e59672648e4eca895dd1a1b1ac1311a8e90f75533e7530e24bcf3b0b42db602"
+        }
+      }
+    },
+    {
+      "role": "full gameworld",
+      "path": "environments/minorcircuit/gameworld.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "3918529e91e32d41a9d3cb897e9f90046de48dfb8d072dc52f696fb968201fe7"
+        },
+        "data": {
+          "bytes": 1925136,
+          "sha256": "dc58eb9f7b225b3e4b41bfeee884bce52ca24023e490eedbeda97b4b264753c9"
+        }
+      }
+    },
+    {
+      "role": "effects collection",
+      "path": "effects/effects.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "0ed53deb7100fe0c271f6de8bd69e3ff5a99723f1ba96c06010537cf4548dfb9"
+        },
+        "data": {
+          "bytes": 3977308,
+          "sha256": "f5e9e8cdb4ef73e1ae97afc056eddadc7778ee17b737579453aca513ad5fd756"
+        }
+      }
+    },
+    {
+      "role": "cinematic with embedded models",
+      "path": "NIS/Transitions/round_transition_1.dict",
+      "files": {
+        "dict": {
+          "bytes": 240,
+          "sha256": "538dbbaa88c34e322de86202ec5c005c597ef040cdc6185ac8b6ad88ad1754dd"
+        },
+        "data": {
+          "bytes": 674632,
+          "sha256": "281709da049f66c03636c26d358526526ea39b1d8ab3043a13ca21b3c5fa8609"
+        }
+      }
+    },
+    {
+      "role": "DK crowd material layout",
+      "path": "characters/crowd_dk.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "1d69276236ae91393c5c027bccfe6bb195b3476c9e6d36fa7f188a162b2fed73"
+        },
+        "data": {
+          "bytes": 126288,
+          "sha256": "f1d382a98fabffb95a53ed36d05075f985b9b75f54744ae9f744e38cc9911ad1"
+        }
+      }
+    },
+    {
+      "role": "sliding mask material layout",
+      "path": "environments/femajor/gameworld.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "1fd4552bc6252b96c9762b3ed256a11643e939cd66347a38edd10e7859ea5145"
+        },
+        "data": {
+          "bytes": 2964292,
+          "sha256": "3b2a10bc3c2cb2e75ddd20509d9976626b5eeb5329aec75d44619f7ed99466cd"
+        }
+      }
+    },
+    {
+      "role": "diffuse material with local textures",
+      "path": "environments/majorcircuit/gameworld.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "94acab7ce3300558c72b015a77f9caceae9ade29d176601dcd9fbcb32345673d"
+        },
+        "data": {
+          "bytes": 3563852,
+          "sha256": "6a69961dcc694d0a16d012c3c8402c6bdad4aaada71fff926278d6bee2150c2a"
+        }
+      }
+    },
+    {
+      "role": "fighter behavior script bundle",
+      "path": "characterdefinitions/behaviours.bun.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "c95969bd3314e41e1676acfbd39ca91108013518788ece7c4d3d9f797e5df436"
+        },
+        "data": {
+          "bytes": 286632,
+          "sha256": "31d867f7c20308e0544dfe2d29b8dc03c9eec18fedca370e057bebd9a42d350a"
+        }
+      }
+    },
+    {
+      "role": "fighter combo graph",
+      "path": "characterdefinitions/glassjoe/glassjoecombodata.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "e0a9279fd8de22fe2ad4a27e567e661619733205966bb4ade0f7d417d92bb12a"
+        },
+        "data": {
+          "bytes": 96212,
+          "sha256": "4d404ccf608bf576bb80dd35d5f976faa120e415d66d49f027823658c5167a0e"
+        }
+      }
+    },
+    {
+      "role": "fighter action script",
+      "path": "characterdefinitions/glassjoe/glassjoeaction.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "2cd3950eff51a51c144136360ce606e0d9faf68d59e660adba90a24ea0f5a28d"
+        },
+        "data": {
+          "bytes": 4204,
+          "sha256": "a94e8b9b66507c27bd414f054a093a105590036c9d7aad0fe6d3a5b4597d93f6"
+        }
+      }
+    },
+    {
+      "role": "fighter reaction script",
+      "path": "characterdefinitions/glassjoe/glassjoereaction.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "f2c077d6030f46817ca164f218cacd31199eaefa27be1313dc50cdc6b76243a9"
+        },
+        "data": {
+          "bytes": 8312,
+          "sha256": "595027ab2e5c3c8dcf77a246e543c7953d072b7e36e293c4b214f0a067bd841d"
+        }
+      }
+    },
+    {
+      "role": "fighter HUD tip script",
+      "path": "characterdefinitions/glassjoe/glassjoehudtips.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "2cd3950eff51a51c144136360ce606e0d9faf68d59e660adba90a24ea0f5a28d"
+        },
+        "data": {
+          "bytes": 4204,
+          "sha256": "bdacd18ed3c1173d3834870a28c55244a50d61216f86108bd625e27a4f4958e4"
+        }
+      }
+    },
+    {
+      "role": "whole cutscene (shots, props, two actors)",
+      "path": "NIS/GlassJoe/knockout.dict",
+      "files": {
+        "dict": {
+          "bytes": 392,
+          "sha256": "4271c4cb48caf1636102d169999f8a9d7597011cc37371f03652124c9735f742"
+        },
+        "data": {
+          "bytes": 364776,
+          "sha256": "e067c5a71e84dee468a7664b5936d8e14c1bdaf19cb6b42e75f4d0f3e8c28968"
+        }
+      }
+    },
+    {
+      "role": "cutscene co-star",
+      "path": "characters/littlemac.dict",
+      "files": {
+        "dict": {
+          "bytes": 88,
+          "sha256": "d4b89c19115b6672a2eee0b53c68f3732ddf7ee6937830a50127ed0d9a3e9650"
+        },
+        "data": {
+          "bytes": 3199588,
+          "sha256": "1899bf3218aeda5a171da08bcd2c696c948bb06342abe7a2e568f2554289a637"
+        }
+      }
+    }
+  ]
+}

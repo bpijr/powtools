@@ -1,0 +1,504 @@
+{
+  "format": "po-material-corpus-audit",
+  "schema": 1,
+  "counts": {
+    "archives": 1194,
+    "archives_with_materials": 224,
+    "corpus_texture_keys": 4088,
+    "external_or_unresolved_references": 15295,
+    "local_references": 23712,
+    "mesh_users": 6263,
+    "model_sets": 356,
+    "mutation_fields_rebuilt_twice": 48,
+    "noop_scalar_fields": 8376,
+    "noop_texture_fields": 39007,
+    "records": 6263,
+    "sections": 2062,
+    "shared_records": 0,
+    "single_section_noop_rebuilds": 99
+  },
+  "layouts": [
+    {
+      "shader": "21DB4385",
+      "layout": "diffuse",
+      "bytes": 8,
+      "records": 21,
+      "families": {
+        "cinematics": 20,
+        "ring and environments": 1
+      },
+      "texture_inputs": [
+        {
+          "offset": 0,
+          "records": 21,
+          "distinct_keys": 6,
+          "matches_corpus_texture_key": 7,
+          "disk_state_matches": 21
+        }
+      ],
+      "outside_prefix_texture_key_matches": 0,
+      "opaque_bytes_per_record": 0
+    },
+    {
+      "shader": "2DFB08EA",
+      "layout": "ropeskin",
+      "bytes": 32,
+      "records": 14,
+      "families": {
+        "ropes": 14
+      },
+      "texture_inputs": [
+        {
+          "offset": 0,
+          "records": 14,
+          "distinct_keys": 10,
+          "matches_corpus_texture_key": 14,
+          "disk_state_matches": 14
+        },
+        {
+          "offset": 8,
+          "records": 14,
+          "distinct_keys": 6,
+          "matches_corpus_texture_key": 14,
+          "disk_state_matches": 14
+        }
+      ],
+      "outside_prefix_texture_key_matches": 0,
+      "opaque_bytes_per_record": 16
+    },
+    {
+      "shader": "32BC21E8",
+      "layout": "stadiumflatreflection",
+      "bytes": 48,
+      "records": 25,
+      "families": {
+        "ring and environments": 25
+      },
+      "texture_inputs": [
+        {
+          "offset": 0,
+          "records": 25,
+          "distinct_keys": 3,
+          "matches_corpus_texture_key": 25,
+          "disk_state_matches": 25
+        },
+        {
+          "offset": 8,
+          "records": 25,
+          "distinct_keys": 2,
+          "matches_corpus_texture_key": 25,
+          "disk_state_matches": 25
+        },
+        {
+          "offset": 16,
+          "records": 25,
+          "distinct_keys": 3,
+          "matches_corpus_texture_key": 25,
+          "disk_state_matches": 25
+        },
+        {
+          "offset": 24,
+          "records": 25,
+          "distinct_keys": 2,
+          "matches_corpus_texture_key": 25,
+          "disk_state_matches": 25
+        }
+      ],
+      "outside_prefix_texture_key_matches": 0,
+      "opaque_bytes_per_record": 16
+    },
+    {
+      "shader": "46ABE398",
+      "layout": "diffusedetail",
+      "bytes": 20,
+      "records": 239,
+      "families": {
+        "cinematics": 219,
+        "effects": 20
+      },
+      "texture_inputs": [
+        {
+          "offset": 0,
+          "records": 239,
+          "distinct_keys": 26,
+          "matches_corpus_texture_key": 230,
+          "disk_state_matches": 239
+        },
+        {
+          "offset": 8,
+          "records": 239,
+          "distinct_keys": 26,
+          "matches_corpus_texture_key": 230,
+          "disk_state_matches": 239
+        }
+      ],
+      "outside_prefix_texture_key_matches": 0,
+      "opaque_bytes_per_record": 4
+    },
+    {
+      "shader": "485F111C",
+      "layout": "hippohwlitenvironment",
+      "bytes": 364,
+      "records": 183,
+      "families": {
+        "ring and environments": 183
+      },
+      "texture_inputs": [
+        {
+          "offset": 0,
+          "records": 183,
+          "distinct_keys": 20,
+          "matches_corpus_texture_key": 183,
+          "disk_state_matches": 183
+        },
+        {
+          "offset": 8,
+          "records": 183,
+          "distinct_keys": 3,
+          "matches_corpus_texture_key": 183,
+          "disk_state_matches": 183
+        },
+        {
+          "offset": 16,
+          "records": 183,
+          "distinct_keys": 6,
+          "matches_corpus_texture_key": 183,
+          "disk_state_matches": 183
+        },
+        {
+          "offset": 24,
+          "records": 183,
+          "distinct_keys": 1,
+          "matches_corpus_texture_key": 183,
+          "disk_state_matches": 183
+        },
+        {
+          "offset": 32,
+          "records": 183,
+          "distinct_keys": 1,
+          "matches_corpus_texture_key": 183,
+          "disk_state_matches": 183
+        }
+      ],
+      "outside_prefix_texture_key_matches": 0,
+      "opaque_bytes_per_record": 324
+    },
+    {
+      "shader": "55951F36",
+      "layout": "hippobasicenvironment",
+      "bytes": 140,
+      "records": 2573,
+      "families": {
+        "cinematics": 162,
+        "ring and environments": 2411
+      },
+      "texture_inputs": [
+        {
+          "offset": 0,
+          "records": 2573,
+          "distinct_keys": 277,
+          "matches_corpus_texture_key": 2126,
+          "disk_state_matches": 2573
+        },
+        {
+          "offset": 8,
+          "records": 2573,
+          "distinct_keys": 55,
+          "matches_corpus_texture_key": 2540,
+          "disk_state_matches": 2573
+        },
+        {
+          "offset": 16,
+          "records": 2573,
+          "distinct_keys": 40,
+          "matches_corpus_texture_key": 2573,
+          "disk_state_matches": 2573
+        },
+        {
+          "offset": 24,
+          "records": 2573,
+          "distinct_keys": 1,
+          "matches_corpus_texture_key": 2573,
+          "disk_state_matches": 2573
+        },
+        {
+          "offset": 32,
+          "records": 2573,
+          "distinct_keys": 1,
+          "matches_corpus_texture_key": 2573,
+          "disk_state_matches": 2573
+        }
+      ],
+      "outside_prefix_texture_key_matches": 0,
+      "opaque_bytes_per_record": 100
+    },
+    {
+      "shader": "A8F6FE22",
+      "layout": "crowdskindk",
+      "bytes": 40,
+      "records": 2,
+      "families": {
+        "crowds": 2
+      },
+      "texture_inputs": [
+        {
+          "offset": 0,
+          "records": 2,
+          "distinct_keys": 1,
+          "matches_corpus_texture_key": 2,
+          "disk_state_matches": 2
+        },
+        {
+          "offset": 8,
+          "records": 2,
+          "distinct_keys": 1,
+          "matches_corpus_texture_key": 2,
+          "disk_state_matches": 2
+        },
+        {
+          "offset": 16,
+          "records": 2,
+          "distinct_keys": 1,
+          "matches_corpus_texture_key": 2,
+          "disk_state_matches": 2
+        }
+      ],
+      "outside_prefix_texture_key_matches": 0,
+      "opaque_bytes_per_record": 16
+    },
+    {
+      "shader": "BACEA013",
+      "layout": "crowdskin",
+      "bytes": 40,
+      "records": 38,
+      "families": {
+        "crowds": 38
+      },
+      "texture_inputs": [
+        {
+          "offset": 0,
+          "records": 38,
+          "distinct_keys": 14,
+          "matches_corpus_texture_key": 38,
+          "disk_state_matches": 38
+        },
+        {
+          "offset": 8,
+          "records": 38,
+          "distinct_keys": 12,
+          "matches_corpus_texture_key": 38,
+          "disk_state_matches": 38
+        },
+        {
+          "offset": 16,
+          "records": 38,
+          "distinct_keys": 12,
+          "matches_corpus_texture_key": 38,
+          "disk_state_matches": 38
+        }
+      ],
+      "outside_prefix_texture_key_matches": 0,
+      "opaque_bytes_per_record": 16
+    },
+    {
+      "shader": "C89C219A",
+      "layout": "hippodiffuseskin",
+      "bytes": 204,
+      "records": 2792,
+      "families": {
+        "cinematics": 238,
+        "fighters and supporting models": 2538,
+        "props": 16
+      },
+      "texture_inputs": [
+        {
+          "offset": 0,
+          "records": 2792,
+          "distinct_keys": 1124,
+          "matches_corpus_texture_key": 2539,
+          "disk_state_matches": 2792
+        },
+        {
+          "offset": 8,
+          "records": 2792,
+          "distinct_keys": 356,
+          "matches_corpus_texture_key": 2539,
+          "disk_state_matches": 2792
+        },
+        {
+          "offset": 16,
+          "records": 2792,
+          "distinct_keys": 750,
+          "matches_corpus_texture_key": 2539,
+          "disk_state_matches": 2792
+        },
+        {
+          "offset": 24,
+          "records": 2792,
+          "distinct_keys": 840,
+          "matches_corpus_texture_key": 2539,
+          "disk_state_matches": 2792
+        },
+        {
+          "offset": 32,
+          "records": 2792,
+          "distinct_keys": 240,
+          "matches_corpus_texture_key": 2539,
+          "disk_state_matches": 2792
+        },
+        {
+          "offset": 40,
+          "records": 2792,
+          "distinct_keys": 228,
+          "matches_corpus_texture_key": 2539,
+          "disk_state_matches": 2792
+        },
+        {
+          "offset": 48,
+          "records": 2792,
+          "distinct_keys": 235,
+          "matches_corpus_texture_key": 2539,
+          "disk_state_matches": 2792
+        },
+        {
+          "offset": 56,
+          "records": 2792,
+          "distinct_keys": 1,
+          "matches_corpus_texture_key": 2792,
+          "disk_state_matches": 2792
+        }
+      ],
+      "outside_prefix_texture_key_matches": 0,
+      "opaque_bytes_per_record": 120
+    },
+    {
+      "shader": "EE5973A5",
+      "layout": "hippodiffusenonskin",
+      "bytes": 184,
+      "records": 206,
+      "families": {
+        "cinematics": 205,
+        "effects": 1
+      },
+      "texture_inputs": [
+        {
+          "offset": 0,
+          "records": 206,
+          "distinct_keys": 38,
+          "matches_corpus_texture_key": 206,
+          "disk_state_matches": 206
+        },
+        {
+          "offset": 8,
+          "records": 206,
+          "distinct_keys": 28,
+          "matches_corpus_texture_key": 206,
+          "disk_state_matches": 206
+        },
+        {
+          "offset": 16,
+          "records": 206,
+          "distinct_keys": 39,
+          "matches_corpus_texture_key": 206,
+          "disk_state_matches": 206
+        },
+        {
+          "offset": 24,
+          "records": 206,
+          "distinct_keys": 37,
+          "matches_corpus_texture_key": 206,
+          "disk_state_matches": 206
+        },
+        {
+          "offset": 32,
+          "records": 206,
+          "distinct_keys": 29,
+          "matches_corpus_texture_key": 206,
+          "disk_state_matches": 206
+        },
+        {
+          "offset": 40,
+          "records": 206,
+          "distinct_keys": 17,
+          "matches_corpus_texture_key": 206,
+          "disk_state_matches": 206
+        },
+        {
+          "offset": 48,
+          "records": 206,
+          "distinct_keys": 19,
+          "matches_corpus_texture_key": 206,
+          "disk_state_matches": 206
+        },
+        {
+          "offset": 56,
+          "records": 206,
+          "distinct_keys": 1,
+          "matches_corpus_texture_key": 206,
+          "disk_state_matches": 206
+        }
+      ],
+      "outside_prefix_texture_key_matches": 0,
+      "opaque_bytes_per_record": 120
+    },
+    {
+      "shader": "EE9D919D",
+      "layout": "constantcolour",
+      "bytes": 24,
+      "records": 7,
+      "families": {
+        "cinematics": 3,
+        "effects": 1,
+        "ring and environments": 3
+      },
+      "texture_inputs": [
+        {
+          "offset": 0,
+          "records": 7,
+          "distinct_keys": 5,
+          "matches_corpus_texture_key": 7,
+          "disk_state_matches": 7
+        }
+      ],
+      "outside_prefix_texture_key_matches": 0,
+      "opaque_bytes_per_record": 16
+    },
+    {
+      "shader": "F2D57AC6",
+      "layout": "stadiumdetailmaskwithuvsliding",
+      "bytes": 52,
+      "records": 163,
+      "families": {
+        "cinematics": 27,
+        "ring and environments": 136
+      },
+      "texture_inputs": [
+        {
+          "offset": 0,
+          "records": 163,
+          "distinct_keys": 16,
+          "matches_corpus_texture_key": 163,
+          "disk_state_matches": 163
+        },
+        {
+          "offset": 8,
+          "records": 163,
+          "distinct_keys": 14,
+          "matches_corpus_texture_key": 163,
+          "disk_state_matches": 163
+        },
+        {
+          "offset": 16,
+          "records": 163,
+          "distinct_keys": 11,
+          "matches_corpus_texture_key": 163,
+          "disk_state_matches": 163
+        }
+      ],
+      "outside_prefix_texture_key_matches": 0,
+      "opaque_bytes_per_record": 28
+    }
+  ],
+  "failures": [],
+  "runtime_verified": false
+}
