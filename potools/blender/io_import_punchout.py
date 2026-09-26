@@ -18,7 +18,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import po_shader
 import importlib as _il
 _il.reload(po_shader)
-from po_shader import (KEY_LIGHT_DIR, PO_RAMP_POS, PO_ALBEDO_GAIN, PO_ALBEDO_LIFT, PO_GLOW,
+from po_shader import (VERTEX_SOURCE_ATTR, VERTEX_SOURCE_SLOT,
+                       KEY_LIGHT_DIR, PO_RAMP_POS, PO_ALBEDO_GAIN, PO_ALBEDO_LIFT, PO_GLOW,
                        PO_AMBIENT, SHOW_DAMAGE, DAMAGE_NAME_HINTS,
                        PO_PRESETS, RIM_DEFAULT, FRESNEL_DEFAULT,
                        po_build_shader, po_new_material, build_light_rig,
@@ -272,13 +273,14 @@ def do_import(dict_path, do_anims=True, anim_filter="", do_textures=True, do_out
     for ri in bh[:len(meshes)]:
         d = rig.a.get_chunk_bytes(ri)
         palettes.append([struct.unpack_from(">I", d, o)[0] for o in range(0, len(d), 4)])
-    verts, faces, guv, guv_damage, guv2 = [], [], [], [], []
+    verts, faces, guv, guv_damage, guv2, vsource = [], [], [], [], [], []
     vg_pairs = {}   # node -> [(vidx, weight)]
     base = 0
     for mi, m in enumerate(meshes):
         pal = palettes[mi] if mi < len(palettes) else []
-        for p in m.pos:
+        for vi, p in enumerate(m.pos):
             verts.append((p[0], p[1], p[2]))
+            vsource.append(VERTEX_SOURCE_SLOT * mi + vi)
         for vi in range(len(m.pos)):
             u, v = (m.uv[vi] if vi < len(m.uv) else (0.0, 0.0))
             guv.append((u, 1.0 - v))
@@ -315,6 +317,11 @@ def do_import(dict_path, do_anims=True, anim_filter="", do_textures=True, do_out
     md = bpy.data.meshes.new("PO_Mesh")
     md.from_pydata(verts, [], faces)
     md.update()
+    # Which archive vertex each Blender vertex came from. Morph records address vertices by
+    # local index, and coincident vertices (a hair flap on the scalp, an eyelid over its socket)
+    # cannot be told apart by position, so the exporter maps deltas back through this.
+    src_attr = md.attributes.new(VERTEX_SOURCE_ATTR, "INT", "POINT")
+    src_attr.data.foreach_set("value", vsource)
     uv0 = md.uv_layers.new(name="UV")
     uvl = uv0.data
     damage_uvl = md.uv_layers.new(name="UV_Damage").data

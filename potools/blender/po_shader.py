@@ -25,6 +25,12 @@ from mathutils import Vector
 KEY_LIGHT_DIR = (0.75, -0.50, 0.43)
 
 PO_RAMP_POS = 0.50        # legacy/export inspection sample; live preview is N dot L driven
+
+# Per-vertex INT attribute on imported fighter meshes: VERTEX_SOURCE_SLOT * mesh slot + local
+# vertex index of the archive vertex it came from. Morph records and aux attributes are keyed
+# by that identity on export; position alone cannot separate coincident vertices.
+VERTEX_SOURCE_ATTR = "po_vertex_source"
+VERTEX_SOURCE_SLOT = 65536
 # Keep the source colour product intact.  The old 1.16 gain plus 0.28 gray lift was fitted to
 # a few screenshots, but it clips neutral/HDR-backed props (DK's barrel and ladder) and turns
 # saturated character art pastel.  Arena lights provide exposure; albedo must not do so too.

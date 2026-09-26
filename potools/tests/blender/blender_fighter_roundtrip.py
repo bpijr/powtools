@@ -96,6 +96,25 @@ def normals_preserved(source, output):
     return same / total
 
 
+def morph_records(path):
+    """Every morph record as (mesh, channel, shape, vertex position, delta), counted.
+
+    Local vertex indices are renumbered on export, so records are compared by the position of
+    the vertex they move. Counting them catches a delta copied onto a coincident vertex it never
+    belonged to (a hair flap's delta landing on the scalp under it)."""
+    from collections import Counter
+    from nlg_morph import Morphs
+    m = Morphs(str(path))
+    out = Counter()
+    for ch in range(m.B):
+        for mi, si, recs in m.channel_deltas(ch):
+            pos = m.meshes[mi].pos
+            for idx, dx, dy, dz in recs:
+                out[(mi, ch, si) + tuple(round(c, 4) for c in pos[idx])
+                    + tuple(round(c, 4) for c in (dx, dy, dz))] += 1
+    return out
+
+
 def chunk_diff(a_path, b_path):
     a, b = Archive(str(a_path)), Archive(str(b_path))
     assert len(a.find_chunks()) == len(b.find_chunks())
@@ -117,6 +136,8 @@ def fighter(path, tmp):
     assert changed <= GEOMETRY, ["%04X" % t for t in changed - GEOMETRY]   # rig, clips, side tables untouched
     share = normals_preserved(path, noop)
     assert share > 0.99, share
+    src_m, out_m = morph_records(path), morph_records(noop)
+    assert src_m == out_m, ("unedited export changed morph records", len(src_m - out_m), len(out_m - src_m))
     # Edited: move one joint and one vertex. Bind translation and node offset follow; clips stay.
     bpy.context.view_layer.objects.active = arm
     bpy.ops.object.mode_set(mode="EDIT")

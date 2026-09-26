@@ -646,7 +646,8 @@ def read_scene_buckets(armature, mesh_objs, resolve, fallback_hash, nearest_bone
 
     def bucket(slot):
         if slot not in buckets:
-            buckets[slot] = {"verts": [], "normals": [], "uvs": [], "weights": [], "tris": []}
+            buckets[slot] = {"verts": [], "normals": [], "uvs": [], "weights": [], "tris": [],
+                             "source": []}
         return buckets[slot]
 
     def vweights(v, vgroups, co):
@@ -689,6 +690,11 @@ def read_scene_buckets(armature, mesh_objs, resolve, fallback_hash, nearest_bone
             if uv_layer is None:
                 uv_layer = mesh.uv_layers.active
             uv = uv_layer.data if uv_layer is not None else None
+            src_attr = mesh.attributes.get(po_shader.VERTEX_SOURCE_ATTR)
+            vsource = None
+            if src_attr is not None and src_attr.domain == "POINT" and src_attr.data_type == "INT":
+                vsource = [0] * len(mesh.vertices)
+                src_attr.data.foreach_get("value", vsource)
             vgroups = obj.vertex_groups
             if not mesh.materials:
                 raise RuntimeError(f"Object '{obj.name}' has no materials.")
@@ -733,6 +739,11 @@ def read_scene_buckets(armature, mesh_objs, resolve, fallback_hash, nearest_bone
                         b["normals"].append([no.x, no.y, no.z])
                         b["uvs"].append([u[0], 1.0 - u[1]])
                         b["weights"].append(vweights(v, vgroups, (co.x, co.y, co.z)))
+                        # the archive vertex this one came from, if it still sits in that slot
+                        src = vsource[vi] if vsource is not None else -1
+                        b["source"].append(src % po_shader.VERTEX_SOURCE_SLOT
+                                           if src >= 0 and src // po_shader.VERTEX_SOURCE_SLOT == slot
+                                           else -1)
                         local[key] = len(b["verts"]) - 1
                     idx.append(local[key])
                 b["tris"].append(idx)
@@ -946,6 +957,10 @@ def build_target_mesh(nlg_geom, fm_orig, bucket):
     # already in this slot, so pair every new vertex with the source vertex it stands in for.
     srcmap = nearest_source_map(mesh_positions(fm_orig), verts,
                                 mesh_uvs(fm_orig), uvs, mesh_normals(fm_orig), normals)
+    # a vertex that remembers its archive vertex takes that one's attributes, not a lookalike's
+    for j, s in enumerate(bucket.get("source") or ()):
+        if 0 <= s < fm_orig.vcount:
+            srcmap[j] = s
     fm.attrs = build_attrs(fm_orig.attrs, verts, normals, uvs, bytes(bidx), bytes(wbuf), vcount,
                            srcmap)
     fm.strip = tris_to_strip(tris)
@@ -1010,6 +1025,31 @@ def build_vertex_remap(old_pos, new_pos, tol=1e-4):
                             hits.append(j)
         if hits:
             out[i] = hits
+    return out
+
+
+def build_source_remap(old_pos, new_pos, source=None):
+    """old local vertex index -> [new local vertex indices], by recorded identity first.
+
+    `source[j]` is the archive vertex new vertex j was imported from (-1 if unknown). A position
+    match cannot tell coincident vertices apart -- a hair flap lying on the scalp, an eyelid over
+    its socket -- and gave the flap's delta to the scalp too, so the head tore open when the
+    morph fired. It also lost every delta on a vertex that was moved. Position matching is kept
+    only for vertices with no recorded source (older imports, geometry you added), and only
+    against new vertices that have no source of their own.
+    """
+    if not source or all(s < 0 for s in source):
+        return build_vertex_remap(old_pos, new_pos)
+    out = {}
+    for j, s in enumerate(source):
+        if 0 <= s < len(old_pos):
+            out.setdefault(s, []).append(j)
+    loose = [j for j, s in enumerate(source) if not 0 <= s < len(old_pos)]
+    orphans = [i for i in range(len(old_pos)) if i not in out]
+    if loose and orphans:
+        sub = build_vertex_remap([old_pos[i] for i in orphans], [new_pos[j] for j in loose])
+        for oi, hits in sub.items():
+            out[orphans[oi]] = [loose[h] for h in hits]
     return out
 
 
@@ -1383,7 +1423,8 @@ def do_export(source_dict, out_dict, bake_colors=True, shade_floor=1.0, neutrali
             # Match the rebuilt vertices back to the ones the morph deltas were authored
             # against, so blend shapes keep addressing the right vertex. Untouched geometry
             # matches exactly; a reshaped mesh matches wherever it did not move.
-            morph_remaps[i] = build_vertex_remap(mesh_positions(fm_orig), mesh_positions(fm))
+            morph_remaps[i] = build_source_remap(mesh_positions(fm_orig), mesh_positions(fm),
+                                                 buckets[i].get("source"))
         else:
             fm = zero_mesh(nlg_geom, fm_orig)
             new_meshes.append(fm)
