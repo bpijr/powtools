@@ -131,6 +131,28 @@ python potools/tools/validate_mod.py D:/po_mods/ironjoe/glassjoe.dict art/charac
 
 The game-side shader remains the original `hippodiffuseskin` selected by the mesh record, so the part receives the normal Punch-Out arena lighting, specular response and rim effects. The source slot is no longer the source of its diffuse texture or material record. You still cannot invent a ninth shader texture stage without changing `main.dol`; use the available detail, ramp, rim, HDR and fresnel inputs instead.
 
+## Adding geometry (a hat)
+
+The archive has a fixed set of mesh slots, and the tools cannot add a new one yet. A slot's
+geometry can grow, though, so new parts go into an existing slot and share its material.
+
+1. Model the part and join it into the imported mesh (Ctrl+J), or add it in Edit mode.
+2. Give its faces the material of the slot it will live in. A slot with a custom texture is
+   easiest: make that texture an atlas, so the old art and the new part each take a region, and
+   move the old UVs into theirs. Iron Joe's hat shares slot 9 with the trunks on a 512×1024
+   atlas, trunks on top and hat below. Keep atlas sides powers of two.
+3. Weight every new vertex to the bone it should follow; the hat is 100% `bip01 head`. The
+   exporter adds that bone to the slot's palette.
+4. If the mesh has shape keys, the new vertices must sit at their rest position in every key, or
+   a morph will move them. Joining a separate object does this for you.
+5. Export and validate as usual. The report lists the slot's new vertex count.
+
+![A top hat added to slot 9](img/mod_pipeline/11_tophat.png)
+
+Imported vertices carry a `po_vertex_source` attribute naming the archive vertex they came from;
+anything you add has 0 there, meaning "none". Leave it alone: the exporter uses it to keep morphs
+and vertex colours on the right vertices.
+
 ## Notes
 
 - **Color bake**: recolors the ramp of each slot whose material is a plain Blender material, from

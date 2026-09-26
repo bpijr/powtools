@@ -115,6 +115,60 @@ def morph_records(path):
     return out
 
 
+def added_morph(path, obj, tmp, base_records):
+    """A shape-key delta on a vertex the source never morphed is written as a new record."""
+    import io_export_punchout as exporter
+    keys = obj.data.shape_keys
+    if keys is None:
+        return
+    kb = next(k for k in keys.key_blocks if exporter.morph_key_channel(k.name) is not None)
+    ch = exporter.morph_key_channel(kb.name)
+    basis = keys.reference_key.data
+    vi = next(i for i, p in enumerate(kb.data) if (p.co - basis[i].co).length < 1e-6)
+    kb.data[vi].co.z += 0.01
+    out = tmp / path.stem / "morph" / "art" / "characters" / (path.stem + ".dict")
+    exporter.do_export(str(path), str(out))
+    kb.data[vi].co.z -= 0.01
+    new = morph_records(out) - base_records
+    assert new and all(k[1] == ch and abs(k[-1] - 0.01) < 1e-4 and k[-3:-1] == (0.0, 0.0) for k in new), new
+    assert not base_records - morph_records(out), "adding a record lost an existing one"
+
+
+def added_geometry(path, obj, tmp, base_records):
+    """New faces joined into slot 0 export as extra vertices and leave every morph record alone.
+
+    Blender fills po_vertex_source with 0 for vertices it creates; 0 must mean 'no archive
+    vertex', not slot 0 vertex 0, or the new triangle would inherit that vertex's morphs."""
+    import bmesh
+    import po_shader
+    from mathutils import Vector
+    import io_export_punchout as exporter
+    me = obj.data
+    slot0 = next(i for i, m in enumerate(me.materials)
+                 if m is not None and exporter.slot_for_material(m) == 0)
+    before = nlg_model.model_sets(Archive(str(path)))[0].meshes[0].vertex_count
+    bm = bmesh.new(); bm.from_mesh(me)
+    shape = list(bm.verts.layers.shape.values())
+    top = max(bm.verts, key=lambda v: v.co.z).co.copy()
+    vs = [bm.verts.new(top + Vector(d)) for d in ((0, 0, 0.05), (0.02, 0, 0.05), (0, 0.02, 0.05))]
+    for v in vs:
+        for sl in shape: v[sl] = v.co
+    bm.faces.new(vs).material_index = slot0
+    bm.to_mesh(me); bm.free()
+    out = tmp / path.stem / "added" / "art" / "characters" / (path.stem + ".dict")
+    exporter.do_export(str(path), str(out))
+    after = nlg_model.model_sets(Archive(str(out)))[0].meshes[0].vertex_count
+    bm = bmesh.new(); bm.from_mesh(me)
+    bm.verts.ensure_lookup_table()
+    bmesh.ops.delete(bm, geom=bm.verts[-3:], context="VERTS"); bm.to_mesh(me); bm.free()
+    assert after >= before + 3, (before, after)
+    slot_size = po_shader.VERTEX_SOURCE_SLOT
+    assert exporter.vertex_source(0, 0) == -1, "0 must mean no archive vertex"
+    assert exporter.vertex_source(1, 0) == 0 and exporter.vertex_source(slot_size + 5, 1) == 4
+    assert exporter.vertex_source(slot_size + 5, 2) == -1, "a vertex moved to another slot has no source"
+    assert morph_records(out) == base_records, "added geometry changed morph records"
+
+
 def chunk_diff(a_path, b_path):
     a, b = Archive(str(a_path)), Archive(str(b_path))
     assert len(a.find_chunks()) == len(b.find_chunks())
@@ -138,6 +192,8 @@ def fighter(path, tmp):
     assert share > 0.99, share
     src_m, out_m = morph_records(path), morph_records(noop)
     assert src_m == out_m, ("unedited export changed morph records", len(src_m - out_m), len(out_m - src_m))
+    added_morph(path, obj, tmp, out_m)
+    added_geometry(path, obj, tmp, out_m)
     # Edited: move one joint and one vertex. Bind translation and node offset follow; clips stay.
     bpy.context.view_layer.objects.active = arm
     bpy.ops.object.mode_set(mode="EDIT")

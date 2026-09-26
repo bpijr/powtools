@@ -647,7 +647,7 @@ def read_scene_buckets(armature, mesh_objs, resolve, fallback_hash, nearest_bone
     def bucket(slot):
         if slot not in buckets:
             buckets[slot] = {"verts": [], "normals": [], "uvs": [], "weights": [], "tris": [],
-                             "source": []}
+                             "source": [], "morph": [], "morph_keys": set()}
         return buckets[slot]
 
     def vweights(v, vgroups, co):
@@ -695,6 +695,10 @@ def read_scene_buckets(armature, mesh_objs, resolve, fallback_hash, nearest_bone
             if src_attr is not None and src_attr.domain == "POINT" and src_attr.data_type == "INT":
                 vsource = [0] * len(mesh.vertices)
                 src_attr.data.foreach_get("value", vsource)
+            # Per-vertex morph deltas authored as shape keys: {key name: (dx, dy, dz)}.
+            vmorph = shape_key_deltas(obj)
+            morph_keys = ({kb.name for kb in mesh.shape_keys.key_blocks
+                           if morph_key_channel(kb.name) is not None} if vmorph is not None else set())
             vgroups = obj.vertex_groups
             if not mesh.materials:
                 raise RuntimeError(f"Object '{obj.name}' has no materials.")
@@ -724,6 +728,7 @@ def read_scene_buckets(armature, mesh_objs, resolve, fallback_hash, nearest_bone
                 if slot is None:
                     continue
                 b = bucket(slot)
+                b["morph_keys"] |= morph_keys
                 idx = []
                 for li, vi in zip(tri.loops, tri.vertices):
                     # The game stores one UV per vertex, so a UV seam must split the vertex.
@@ -740,10 +745,8 @@ def read_scene_buckets(armature, mesh_objs, resolve, fallback_hash, nearest_bone
                         b["uvs"].append([u[0], 1.0 - u[1]])
                         b["weights"].append(vweights(v, vgroups, (co.x, co.y, co.z)))
                         # the archive vertex this one came from, if it still sits in that slot
-                        src = vsource[vi] if vsource is not None else -1
-                        b["source"].append(src % po_shader.VERTEX_SOURCE_SLOT
-                                           if src >= 0 and src // po_shader.VERTEX_SOURCE_SLOT == slot
-                                           else -1)
+                        b["source"].append(vertex_source(vsource[vi], slot) if vsource is not None else -1)
+                        b["morph"].append(vmorph.get(vi) if vmorph is not None else None)
                         local[key] = len(b["verts"]) - 1
                     idx.append(local[key])
                 b["tris"].append(idx)
@@ -1028,6 +1031,17 @@ def build_vertex_remap(old_pos, new_pos, tol=1e-4):
     return out
 
 
+def vertex_source(value, slot):
+    """Local archive index recorded in a po_vertex_source value, or -1.
+
+    -1 when the value is 0 (a vertex Blender created: joined, extruded, added) or names a
+    different slot (a face reassigned to another material)."""
+    src = value - 1
+    if src < 0 or src // po_shader.VERTEX_SOURCE_SLOT != slot:
+        return -1
+    return src % po_shader.VERTEX_SOURCE_SLOT
+
+
 def build_source_remap(old_pos, new_pos, source=None):
     """old local vertex index -> [new local vertex indices], by recorded identity first.
 
@@ -1154,6 +1168,98 @@ def remap_morphs(a, remaps, vcounts):
                 shapes[si] = out
     a.replace_chunk(cs[0], _build_b00c(A, B, bps, S, lists))
     return kept, dropped, dup
+
+
+MORPH_EPS = 1e-5    # smaller shape-key offsets are float noise, not an authored delta
+MORPH_TOL = 1e-4    # authored and archive deltas this close are the same record
+
+
+def morph_key_channel(name):
+    """Channel number of an imported morph shape key ('06_blink_r_top' -> 6), else None."""
+    return int(name[:2]) if len(name) > 3 and name[:2].isdigit() and name[2] == "_" else None
+
+
+def shape_key_deltas(obj):
+    """{vertex index: {key name: (dx, dy, dz)}} for every morph shape key, in archive space.
+
+    None when the object has no shape keys at all, so meshes built without them keep the
+    archive's records instead of being read as 'every morph deleted'."""
+    keys = obj.data.shape_keys
+    if keys is None:
+        return None
+    rot = obj.matrix_world.to_3x3()
+    out = {}
+    for kb in keys.key_blocks:
+        if kb == keys.reference_key or morph_key_channel(kb.name) is None:
+            continue
+        base = kb.relative_key.data
+        for i, p in enumerate(kb.data):
+            d = p.co - base[i].co
+            if d.length > MORPH_EPS:
+                d = rot @ d
+                out.setdefault(i, {})[kb.name] = (d.x, d.y, d.z)
+    return out
+
+
+def author_morphs(a, buckets):
+    """Write shape-key edits into 0xB00C, on top of the records remap_morphs carried over.
+
+    Each imported shape key is one (channel, shape) of the morph chunk: '06_blink_r_top', or
+    '11_x_50' for the 0.5 stage of a two-stage channel. Wherever a key's deltas on a rebuilt
+    mesh match the carried-over records they are left byte-for-byte; where they differ -- a
+    vertex moved further, or one the source never morphed -- that mesh's shape is rewritten from
+    the key. Channel count, breakpoints and every clip stay as they are, so the engine drives an
+    extended shape exactly as it drove the original.
+
+    Returns [(mesh, channel, shape, records before, records after)] for each rewritten shape.
+    """
+    cs = a.find_chunks(type_id=0xB00C)
+    if not cs:
+        return []
+    A, B, bps, S, lists = _parse_b00c(a.get_chunk_bytes(cs[0]))
+    counts = [len(s) for s in lists[0]] if S else []
+    by_ch, i = [], 0
+    for n in counts:
+        by_ch.append(bps[i:i + n]); i += n
+
+    def shape_of(name):
+        ch = morph_key_channel(name)
+        if ch is None or ch >= B or not by_ch[ch]:
+            return None
+        if len(by_ch[ch]) == 1:
+            return ch, 0
+        tail = name.rsplit("_", 1)[-1]
+        for si, b in enumerate(by_ch[ch]):
+            if tail == str(int(round(b * 100))):
+                return ch, si
+        return None
+
+    changed = []
+    for mi, b in buckets.items():
+        per = b.get("morph") or []
+        if mi >= S or not any(m is not None for m in per):
+            continue
+        authored = {}
+        for j, deltas in enumerate(per):
+            for name, d in (deltas or {}).items():
+                cs_ = shape_of(name)
+                if cs_ is not None:
+                    authored.setdefault(cs_, {})[j] = d
+        # shapes whose key exists but moves nothing on this mesh are authored as empty
+        for (ch, si) in {shape_of(nm) for nm in b.get("morph_keys", ())} - {None}:
+            authored.setdefault((ch, si), {})
+        for (ch, si), want in authored.items():
+            have = {idx: (dx, dy, dz) for idx, dx, dy, dz in lists[mi][ch][si]
+                    if abs(dx) + abs(dy) + abs(dz) > MORPH_EPS}
+            if want.keys() == have.keys() and all(
+                    max(abs(p - q) for p, q in zip(want[k], have[k])) <= MORPH_TOL for k in want):
+                continue
+            before = len(lists[mi][ch][si])
+            lists[mi][ch][si] = [(j,) + tuple(want[j]) for j in sorted(want)]
+            changed.append((mi, ch, si, before, len(lists[mi][ch][si])))
+    if changed:
+        a.replace_chunk(cs[0], _build_b00c(A, B, bps, S, lists))
+    return changed
 
 
 def zero_mesh(nlg_geom, fm_orig):
@@ -1441,6 +1547,9 @@ def do_export(source_dict, out_dict, bake_colors=True, shade_floor=1.0, neutrali
         if mdropped and not mkept:
             report.append("NOTE: no morph delta could be matched -- facial animation will not "
                           "play. That is expected if you replaced the head geometry outright.")
+    for mi, ch, si, before, after in author_morphs(a, buckets):
+        report.append("morph shape keys: slot %d channel %d shape %d rewritten, %d -> %d records"
+                      % (mi, ch, si, before, after))
 
     # Bind JOINT POSITIONS must follow the geometry. Vertices are written at their new rest
     # positions; if W_bind still uses the old joint origins the game skins them to the wrong

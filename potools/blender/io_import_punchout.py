@@ -280,7 +280,7 @@ def do_import(dict_path, do_anims=True, anim_filter="", do_textures=True, do_out
         pal = palettes[mi] if mi < len(palettes) else []
         for vi, p in enumerate(m.pos):
             verts.append((p[0], p[1], p[2]))
-            vsource.append(VERTEX_SOURCE_SLOT * mi + vi)
+            vsource.append(VERTEX_SOURCE_SLOT * mi + vi + 1)
         for vi in range(len(m.pos)):
             u, v = (m.uv[vi] if vi < len(m.uv) else (0.0, 0.0))
             guv.append((u, 1.0 - v))
