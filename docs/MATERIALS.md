@@ -35,18 +35,40 @@ they are **not** interchangeable:
   `main.dol`. Never change it.
 - **@20 = material name** → `bearhugger_mats/bh_gloves`, `gj_mats/gj_skin`, `lm_mats/helmet`.
 
-| offset  | field                                                                          |
-| ------- | ------------------------------------------------------------------------------ |
-| `+0x00` | 8 × `{u32 textureHash, u32 0xFFFF0000}`                                        |
-| `+0x84` | f32 spec power (gloves 64, skin 32, cloth 2)                                   |
-| `+0x9C` | f32[3] tint — the character's warm key/rim colour, **identical on every mesh** |
-| `+0xA8` | f32 alpha (1.0 on every boxer checked)                                         |
-| `+0xB4` | f32[3] colour2 (1,1,1)                                                         |
+Every field is named: the shader descriptor (vtable `8033B270`) returns a parameter table of
+`{name hash, type, offset}` covering the whole record. *Runtime* fields are zero on disk and written
+by the game each frame; editing them does nothing.
 
-Slots, in order: `0 detail`, `1 damage`, `2 specmask`, `3 ramp`, `4 rimramp`, `5 hdr`,
-`6 fresnel`, `7 specramp`.
+| offset | field | type | notes |
+| --- | --- | --- | --- |
+| `+0x00`..`+0x38` | `nlg_diffuse`, `nlg_damagemap`, `nlg_specmask`, `nlg_cellramp`, `nlg_rimlightmap`, `nlg_gloss`, `nlg_fresnel`, `nlg_specramp` | 8 × texture ref | slots 0–7; `{u32 hash, u16 cache, u8 control, u8 filter}` |
+| `+0x40` | `skinmatrices` | runtime | |
+| `+0x48`..`+0x74` | `showtranslucency`, `shadowmapoutput`, `dynamiccharacteralpha`, `viewspeclightdirection` (vec3), `viewspeclightintensity`, `blackwhitesilhouette`, `blendcolourint`, `normalextension`, `edgeaatype`, `usefeoutlinecolour` | runtime | light, outline shell, silhouette |
+| `+0x78` | `allowtranslucency` | bool | |
+| `+0x7C` | `outlinetranslucency` | bool | |
+| `+0x80` | `fresnelpower` | f32 | fresnel texgen exponent |
+| `+0x84` | `specpower` | f32 | gloves 64, skin 32, cloth 2; selects the specramp row |
+| `+0x88` | `isglowing` | bool | 0 on every fighter |
+| `+0x8C` | `antialias` | bool | 0 on every fighter |
+| `+0x90` | `rimlight` | bool | rim stage on/off |
+| `+0x94` | `additiverimlight` | bool | rim added vs multiplied |
+| `+0x98` | `enabledamagetexture` | 0/1/2 | damage stage (technique 3/4) |
+| `+0x9C` | `outlinecolour` | RGBA f32 | **the outline colour, not a lighting tint** |
+| `+0xAC` | `damagelevellow` | runtime | |
+| `+0xB0` | `enableenvmap` | bool | gloss sphere-map stage (technique 2/4) |
+| `+0xB4` / `+0xB8` | `envmaphorizscale` / `envmapvertscale` | f32 | sphere-map scale |
+| `+0xBC` | `envmaptexturelevel` | f32 | gloss strength |
+| `+0xC0` | `noblendcolour` | bool | |
+| `+0xC4` | `alphaobject` | f32 | |
+| `+0xC8` | `damagelevelhigh` | runtime | |
 
-~15 u32s in the record are still unidentified. That is why export preserves them (below).
+Earlier versions of this page called `+0x9C` a "tint" and `+0xA8` "alpha"; `+0xA8` is the alpha
+component of `outlinecolour`. The exporter still stores the record verbatim for untouched
+materials, so nothing that was already exported is affected. Which of these flags change a
+fighter in game has not been tested one by one yet.
+
+Source: `decomp/research/rendering_pipeline.md` and `shader_props.json` (the separate executable
+research repository).
 
 ---
 
@@ -131,31 +153,53 @@ detail texture and a rebuilt record, while the mesh continues to use the game's 
 Preset ramp endpoints are the real measured values from Bear Hugger's shipped ramps, so a fresh
 template already sits in the range the game's own art occupies.
 
-Nodes you edit, by name:
+### How the Blender graph maps to the game
 
-| node                    | slot | what it is                            |
-| ----------------------- | ---- | ------------------------------------- |
-| `PO_Ramp`               | 3    | the colour. A ColorRamp — drag it.    |
-| `PO_RampTexture`        | 3    | exact repaired source LUT used by preview |
-| `PO_RampSource`         | —    | 0 exact source / 1 editable ramp preview |
-| `PO_Detail`             | 0    | the pattern/albedo image (UV mapped)  |
-| `PO_SpecMask`           | 2    | UV specular mask                      |
-| `PO_SpecRamp`           | 7    | specular response vs powered N·H      |
-| `PO_RimRamp`            | 4    | rim light response vs N·V             |
-| `PO_Hdr` + `PO_Fresnel` | 5, 6 | the bloom, on the glove/metal presets |
-| `PO_Tint`               | —    | the warm key/rim colour               |
+Every fighter material is built from two shared node groups, transcribed from the executable
+(symbolic execution of the draw functions; see the decomp notes above):
 
-Scene-wide tunables in `po_shader.py`: `KEY_LIGHT_DIR`, `PO_ALBEDO_GAIN`, `PO_ALBEDO_LIFT`,
-`PO_GLOW`, and `PO_SPECULAR_SCALE`, plus `po_set_*()` helpers. `build_light_rig()` now creates
-only the `PO_TEV_KeyVector` controller and disables obsolete Blender preview lamps.
+- **PO Skin TexGen** — geometry in, the texture coordinates GX generates out: UV0/1/2, the
+  half-Lambert ramp coordinate `0.5·N·L + 0.5`, specular `N·H` with row `specpower/128`, fresnel,
+  rim (`Nz/2, (1 − Ny)/2`) and the sphere map. All in GX view space.
+- **PO Skin TEV** — the sampled textures and the record's switches in, the TEV stages out:
+  `REG0 = K0 × ramp × detail (× damage)`, `C = K0 × spec(fresnel) × spec(N·H)`, optional gloss,
+  `C = REG0 + C × specmask`, then the additive or multiplied rim. Every stage clamps to 0..1 as
+  the hardware does.
 
-The preview base expression is `LUT(N·L) × detail`, followed by the decoded optional stages and
-one gamma-to-linear conversion before Emission. An earlier screenshot fit used
-`ramp × detail × 1.16 + 0.28`; that gray lift clipped neutral/HDR placeholder materials and
-washed saturated source art. There is no PBR exposure or bounce-light term in the game-material graph.
-The Donkey Kong pre-fight comparison uses a bounded `0.80` gain plus `0.04` neutral lift,
-`0.14` rim/HDR add and `0.08` specular add.  These values were fitted at the matching NIS
-camera pose, retaining the decoded LUT/detail stages while preventing the gloves from clipping.
+![A fighter material: texture slots, then TexGen, then TEV](img/mod_pipeline/12_shader_material.png)
+
+Open either group (select it, **Tab**) to read or change the math; each section is a labelled
+frame.
+
+![Inside PO Skin TEV](img/mod_pipeline/13_shader_tev.png)
+
+![Inside PO Skin TexGen](img/mod_pipeline/14_shader_texgen.png)
+ Both groups are shared, so an edit applies to every material at once. The texture slots
+stay at the material's top level, one node per record slot:
+
+| node | slot | what it is |
+| --- | --- | --- |
+| `PO_Detail` | 0 | albedo image (UV0) |
+| `PO_Damage` | 1 | hurt overlay (UV1), shown by the Normal/Hurt toggle |
+| `PO_SpecMask` | 2 | specular mask (UV2) |
+| `PO_Ramp` | 3 | cell ramp. The ColorRamp is what you edit and what exports |
+| `PO_RimRamp` | 4 | rim ramp |
+| `PO_Hdr` + `PO_Fresnel` | 5, 6 | gloss sphere map and its fresnel |
+| `PO_SpecRamp` | 7 | spec ramp; the game samples it twice (at fresnel and at N·H) |
+| `PO_*Texture` / `PO_*Source` | — | the exact source texture, and the switch between it and your edit |
+| `PO_LightVector` | — | the character light (world space, towards the light) |
+| `PO_Tint` | — | `outlinecolour` (+0x9C); round-trips, not used for shading |
+
+The viewport previews the exact source texture until you edit a ramp; the edit then shows
+automatically (flip `PO_*Source` back to 0 to compare). Shared textures such as
+`global/specramp` load from `global.dict`: import once from the extracted dump in a session, or
+set `PO_ART_ROOT`, before importing a mod stored elsewhere.
+
+The default light is the opponent's in-bout light, normalize(−2.5, −3.65, 1.0), which matches
+Dolphin footage of Glass Joe; cutscenes use (2.5, 3.65, 1.0). Two TEV constants are calibrated
+against retail footage rather than decoded, and are separate group inputs so they stay visible:
+the rim constant (1/4) and the gloss level scale (0). The old fitted gain, lift and glow values
+are gone.
 
 ---
 
@@ -172,7 +216,7 @@ name to @20.
 ### The governing rule: don't touch what wasn't edited
 
 A repaint cannot survive a 32-stop ColorRamp resample plus a re-encode through our own CMPR
-compressor, and the record has those ~15 unnamed u32s. So import stamps every material with its
+compressor, and several record fields have no editor yet. So import stamps every material with its
 original 204-byte record, its 8 slot hashes, and a fingerprint (`fp_ramp` / crc32 `fp_image`) of
 every ramp and image. Export writes untouched materials back **verbatim** and re-bakes only the
 individual slots whose fingerprint moved (`po_shader.dirty_slots`).
@@ -207,8 +251,8 @@ individual slots whose fingerprint moved (`po_shader.dirty_slots`).
   claim a different target slot.
 - **Mesh→material mapping uses `po_slot`**, not face order. The importer and custom-material
   operator set it automatically; `slotN` remains a manual compatibility fallback.
-- **New texture hashes are not in `art/hashid.bin`.** That path has not been booted in Dolphin.
-  Overwriting an existing texture name is the proven route.
+- **New texture hashes do not need to be in `art/hashid.bin`.** Iron Joe boots in Dolphin with
+  nine new texture entries that the registry does not name.
 - Cannot add a 9th slot or a new material _type_ — the 204-byte struct is fixed. Cannot change
   the shader; that lives in `main.dol`.
 

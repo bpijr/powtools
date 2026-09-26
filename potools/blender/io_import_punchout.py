@@ -179,6 +179,33 @@ def _find_hashid(dict_path):
     return nlg_hash.find_hashid_bin(dict_path)[0]
 
 
+_LAST_GLOBAL = []   # global.dict found by an earlier import this session
+
+
+def _global_archive(dict_path):
+    """global.dict for a fighter archive: beside it (up to 4 folders up), then PO_ART_ROOT,
+    then the one an earlier import found. Mods usually live outside the dump, where only the
+    last fallback can see the shared textures (global/specramp) they reference."""
+    from pathlib import Path
+    from nlg_pack import Archive
+    tries = [p / "global.dict" for p in list(Path(dict_path).resolve().parents)[:4]]
+    if os.environ.get("PO_ART_ROOT"):
+        tries.append(Path(os.environ["PO_ART_ROOT"]) / "global.dict")
+    tries += _LAST_GLOBAL
+    for path in tries:
+        if path.is_file():
+            try:
+                arc = Archive(str(path))
+            except Exception as ex:
+                print("PunchOut: %s not readable: %s" % (path, ex)); continue
+            if path not in _LAST_GLOBAL:
+                _LAST_GLOBAL[:] = [path]
+            return arc
+    print("PunchOut: global.dict not found; shared textures (global/specramp) cannot be previewed. "
+          "Import once from the extracted dump, or set PO_ART_ROOT.")
+    return None
+
+
 def do_import(dict_path, do_anims=True, anim_filter="", do_textures=True, do_outline=True):
     tools = _find_tools(dict_path)
     if not tools:
@@ -442,7 +469,9 @@ def do_import(dict_path, do_anims=True, anim_filter="", do_textures=True, do_out
             img.update(); img.pack()
             return img
 
-        mats, mesh_to_mat = po_shader.build_materials_from_archive(rig.a, hn, _mkimg)
+        # Fighters reference shared textures (global/specramp, ...) that only global.dict holds.
+        global_arc = _global_archive(dict_path)
+        mats, mesh_to_mat = po_shader.build_materials_from_archive(rig.a, hn, _mkimg, global_arc)
         added = []
         for m in mats:
             obj.data.materials.append(m); added.append(m)
@@ -1088,6 +1117,26 @@ def register():
     # Repair already-open imports and upgrade decoded slot-1 material graphs. At startup the
     # add-on sees a restricted context without a scene, so wait until one exists.
     bpy.app.timers.register(_repair_open_imports, first_interval=0.1)
+    if _preview_edited_ramps not in bpy.app.handlers.depsgraph_update_post:
+        bpy.app.handlers.depsgraph_update_post.append(_preview_edited_ramps)
+
+
+@bpy.app.handlers.persistent
+def _preview_edited_ramps(scene, depsgraph=None):
+    """Show a ramp edit in the viewport as soon as it is made (po_shader.show_edited_ramps)."""
+    if depsgraph is None:
+        return
+    trees = set()
+    for update in depsgraph.updates:
+        idd = getattr(update.id, "original", update.id)
+        if isinstance(idd, bpy.types.Material):
+            po_shader.show_edited_ramps(idd)
+        elif isinstance(idd, bpy.types.ShaderNodeTree):
+            trees.add(idd)
+    if trees:
+        for mat in bpy.data.materials:
+            if mat.node_tree in trees:
+                po_shader.show_edited_ramps(mat)
 
 
 def _repair_open_imports():
@@ -1098,6 +1147,8 @@ def _repair_open_imports():
 
 
 def unregister():
+    if _preview_edited_ramps in bpy.app.handlers.depsgraph_update_post:
+        bpy.app.handlers.depsgraph_update_post.remove(_preview_edited_ramps)
     if bpy.app.timers.is_registered(_repair_open_imports):
         bpy.app.timers.unregister(_repair_open_imports)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func)

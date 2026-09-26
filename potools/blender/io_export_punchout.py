@@ -2359,6 +2359,11 @@ PO_NODE_NAMES = {"PO_Detail", "PO_Damage", "PO_SpecMask", "PO_Hdr", "PO_Ramp", "
                  "PO_BSDF", "PO_Tint", "PO_RampPos", "PO_AlbedoGain", "PO_AlbedoLift"}
 
 
+# Nodes that exist only to preview the exact source textures: never a texture slot of their own.
+PREVIEW_ONLY_NODES = {"PO_RampTexture", "PO_RimRampTexture", "PO_FresnelTexture",
+                      "PO_SpecRampTexture", "PO_SpecRampFresnel"}
+
+
 def resolve_po_nodes(mat):
     """Map PO texture slots -> shader nodes WITHOUT depending on node names.
 
@@ -2420,8 +2425,8 @@ def resolve_po_nodes(mat):
     # The exact-source LUT previews are viewport helpers, not texture slots. Left in the pool,
     # the last-image fallback below adopted PO_RampTexture as the HDR map (slot 5) on every
     # material without one, and the 512x1 LUT then crashed the CMPR encoder.
-    preview_only = {"PO_RampTexture", "PO_SpecRampTexture"}
-    ramps = [n for n in nodes if getattr(n, "type", "") == "VALTORGB"]
+    preview_only = PREVIEW_ONLY_NODES
+    ramps = [n for n in nodes if getattr(n, "type", "") == "VALTORGB" and n.name not in preview_only]
     imgs = [n for n in nodes if getattr(n, "type", "") == "TEX_IMAGE"
             and getattr(n, "image", None) is not None and n.name not in preview_only]
 
@@ -2659,7 +2664,7 @@ def po_export_materials(obj, dict_path, out_path=None, prefix=None, ramp_size=(1
             _unmapped = [n.image.name for n in (mat.node_tree.nodes if mat.node_tree else [])
                          if getattr(n, 'type', '') == 'TEX_IMAGE'
                          and getattr(n, 'image', None) is not None
-                         and n.name not in ("PO_RampTexture", "PO_SpecRampTexture")
+                         and n.name not in PREVIEW_ONLY_NODES
                          and n not in resolved.values()]
             if _unmapped:
                 ignored.append('%s: image node(s) %s are wired to no PO slot -- NOT exported'

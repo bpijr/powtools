@@ -43,7 +43,7 @@ class MetadataError(ValueError):
 @dataclass(frozen=True)
 class Key:
     name: str        # property name; a trailing * matches a numbered/named family
-    holder: str      # scene, collection, object, bone, material, image, node, action
+    holder: str      # scene, collection, object, bone, material, image, node, node_group, action
     kind: str        # asset kind it belongs to, or "scene" for document-level state
     meaning: str
     scene_level: bool = False   # migrated into the document (not per-ID provenance)
@@ -115,7 +115,9 @@ KEYS = (
     Key("po_preset", "material", "fighter", "Shader preset"),
     Key("po_tex_slot*", "material", "fighter", "Texture name per material slot"),
     Key("po_slot_hash*", "material", "fighter", "Texture hash per material slot"),
-    Key("po_fp_*", "material", "fighter", "Fingerprints of ramps/images/params at import"),
+    Key("po_fp_*", "material", "fighter", "Fingerprints of ramps/images/params at import (and *_shown: last ramp edit auto-previewed)"),
+    Key("po_formula", "node", "fighter", "GX formula a shader-group frame implements (documentation only)"),
+    Key("po_version", "node_group", "fighter", "Version of the shared PO Skin TexGen/TEV node groups; rebuilt when it changes"),
     Key("po_mesh_material", "material", "fighter", "Source mesh material name"),
     Key("po_matoff", "material", "fighter", "Material record offset"),
     Key("po_slot", "material", "fighter", "Archive mesh slot"),

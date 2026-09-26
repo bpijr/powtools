@@ -13,17 +13,18 @@ shader (mesh record matHash@16 = shader name hash; materialOffset@36 = byte offs
      slot5 = HDR/BLOOM     (hdr_02, hdr_03, … or global/black = no bloom)   *** the "HDR" ***
      slot6 = FRESNEL RAMP  (fresnel1..5 or global/black = none)
      slot7 = SPEC RAMP     (global/specramp)
-  +0x40  15 x u32 zeros (unused/runtime)
-  +0x7C  u32  flag (1)
-  +0x80  u32  0
-  +0x84  f32  SPEC POWER (32.0 typical)
-  +0x88  2 x u32 0
-  +0x90  3 x u32 flags (1,1,1)
-  +0x9C  f32[3] TINT RGB (multiplies the ramp — GJ skin = 0.337,0.176,0.180)
-  +0xA8  f32  alpha (1.0)
-  +0xAC  2 x u32 0
-  +0xB4  f32[3] COLOR2 RGB (1,1,1 = neutral)
-  +0xC0  3 x u32 0
+  +0x40..0x77  runtime fields (skinmatrices, light, outline shell); zero on disk
+  +0x78  u32  allowtranslucency     +0x7C u32 outlinetranslucency
+  +0x80  f32  fresnelpower          +0x84 f32 SPEC POWER (32.0 typical)
+  +0x88  u32  isglowing             +0x8C u32 antialias
+  +0x90  u32  rimlight              +0x94 u32 additiverimlight
+  +0x98  u32  enabledamagetexture (0/1/2)
+  +0x9C  f32[4] OUTLINE COLOUR RGBA (the `tint` command edits RGB; +0xA8 is its alpha)
+  +0xAC  runtime damagelevellow     +0xB0 u32 enableenvmap
+  +0xB4  f32  envmaphorizscale      +0xB8 f32 envmapvertscale
+  +0xBC  f32  envmaptexturelevel    +0xC0 u32 noblendcolour
+  +0xC4  f32  alphaobject           +0xC8 runtime damagelevelhigh
+  Field names are the shader's own parameter table (main.dol vtable 8033B270); see MATERIALS.md.
 
 Textures may be per-character (block-2 of the same archive) or GLOBAL (global/black
 0x713033FC, global/specramp 0x2D53BCBA, global/white etc. — always resident, safe to reference).
@@ -31,7 +32,7 @@ Textures may be per-character (block-2 of the same archive) or GLOBAL (global/bl
 WORKFLOW (materials "any way you want"):
   python nlg_material.py list  <char.dict>                # every mesh -> slots + params
   python nlg_material.py set   <char.dict> <mesh#|mat@hex> slot<N> <texname>   # retexture a slot
-  python nlg_material.py tint  <char.dict> <mesh#> R G B  # recolor via tint (no texture edit!)
+  python nlg_material.py tint  <char.dict> <mesh#> R G B  # outline colour RGB (+0x9C); not a recolor
   python nlg_material.py spec  <char.dict> <mesh#> <power>
   python nlg_material.py addtex <char.dict> <name> <x.png> [mesh# slot<N>]   # NEW texture
   python nlg_material.py nohdr <char.dict> [mesh#]        # slot5+6 -> global/black (kill bloom),

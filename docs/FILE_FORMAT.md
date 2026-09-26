@@ -239,10 +239,10 @@ UV-sphere rigged rigidly onto a bone was injected and confirmed in-game.
 ## 5b. Materials — see `MATERIALS.md`
 
 Material records (`MaterialData 0xB016`, 204 B each in the supported preset) expose 8 texture
-slots (detail/damage/spec-mask/diffuse-ramp/rimlight-ramp/hdr/fresnel/spec-ramp), a spec power,
-and an RGB **tint** that recolors a surface with no texture edit. Editor: `nlg_material.py`.
-Unknown words are preserved, not decoded. Field notes and recolor recipes are in **`MATERIALS.md`**. (Note: the earlier "recolor = repaint the
-diffuse texture" tip in §5 is superseded — use the material tint/ramp slots.)
+slots (detail/damage/spec-mask/cell-ramp/rimlight-ramp/gloss/fresnel/spec-ramp), a spec power,
+render switches and an outline colour. Every field is named by the shader's own parameter
+table; see **`MATERIALS.md`**. Editor: `nlg_material.py`. To recolor a surface, edit its cell
+ramp (slot 3); `+0x9C` is the outline colour, not a tint.
 
 ## 6. Textures (`nlg_texture.py`)
 

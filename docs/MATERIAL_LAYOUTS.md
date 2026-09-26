@@ -40,8 +40,8 @@ control interpretation for other shaders are a structural inference from the sha
 disk layout; the registry does not label their rendering roles or edit their state.
 
 Only the skin shader's fields documented in `MATERIALS.md` receive semantic scalar
-names: specular power at +0x84 (editor range 0–256), tint RGB at +0x9C (0–1 each),
-and alpha at +0xA8 (0–1). These bounds are deliberately narrower than all possible
+names: specular power at +0x84 (editor range 0–256), outline colour RGB at +0x9C (0–1 each,
+labelled "tint" in older tools), and its alpha at +0xA8 (0–1). These bounds are deliberately narrower than all possible
 f32 values. Other bytes remain opaque with offset/size/hash inspection. Shader
 programs, renderer flags, UV sliding, reflection parameters, secondary colour and
 other numeric words have no generic editor.
