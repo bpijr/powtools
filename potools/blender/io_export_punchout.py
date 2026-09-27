@@ -1468,7 +1468,7 @@ def repoint_material_textures(archive, slot, old_hash, new_hash):
 # ===========================================================================
 # main export
 # ===========================================================================
-def do_export(source_dict, out_dict, bake_colors=True, shade_floor=1.0, neutralize_lighting=True,
+def do_export(source_dict, out_dict, bake_colors=True, shade_floor=1.0, neutralize_lighting=False,
               write_skeleton=True, materials_follow=False):
     # The UI export starts a fresh output; material chaining below remains internal.
     from pathlib import Path
@@ -1776,20 +1776,22 @@ class ExportPunchOut(bpy.types.Operator, ExportHelper):
                     "(filled in from the imported fighter)",
         subtype="FILE_PATH", default="")
     bake_colors: BoolProperty(
-        name="Bake material colors into ramps", default=True,
-        description="FLAT COLOUR ONLY -- it recolors a slot's ramp, it cannot carry a painted "
-                    "image. Slots whose material has real textures are left to 'Export materials "
-                    "+ textures' below. Recolor each slot's ramp texture from its Base Color, "
-                    "keeping the original cel-shading gradient. No PNGs needed.")
+        name="Flat Base Color (quick recolor)", default=True,
+        description="Only for plain Blender materials (a Principled BSDF with a Base Color): "
+                    "paints that one colour into the slot's toon ramp. Imported materials and ones "
+                    "made with Custom material are never touched by this; edit their ramps in the "
+                    "Material editor instead. It cannot carry a painted image")
     shade_floor: FloatProperty(
         name="Shading floor", default=1.0, min=0.0, max=1.0,
-        description="1.0 = flat solid color (recommended; the game lights the model itself). "
-                    "Lower bakes the source ramp's gradient in, which can show as stripes on gradient "
-                    "base textures.")
+        description="Flat Base Color only: how dark the shadowed end of the ramp gets. 1.0 = one "
+                    "flat colour (the game still lights it); lower keeps some of the source ramp's "
+                    "gradient, which can band on gradient base textures")
     neutralize_lighting: BoolProperty(
-        name="Neutralize lighting maps", default=True,
-        description="Desaturate the rim/HDR/fresnel/spec maps so they cast neutral light. "
-                    "Removes the warm color cast (purple skin) and the red metallic sheen on gloves.")
+        name="Neutralize lighting maps", default=False,
+        description="Flat Base Color only: turn the baked slots' rim/gloss/fresnel/spec maps grey and "
+                    "point their shared lighting textures (global/specramp) at global/black, which "
+                    "removes their specular and rim light. A workaround from before the preview "
+                    "matched the game; leave off unless you want those parts flat")
     write_skeleton: BoolProperty(
         name="Write bind joint positions (skeleton)", default=True,
         description="Push REST joint positions into BoneData. Required if you reshaped the rig "
@@ -1797,11 +1799,14 @@ class ExportPunchOut(bpy.types.Operator, ExportHelper):
                     "blow out into spikes. Game animation axes stay intact to prevent twists.")
     allow_new_textures: BoolProperty(
         name="Allow new textures", default=True,
-        description="Off = the archive gains NO texture entries. A texture that would have to be added (shared with another material, or a size CMPR cannot rewrite in place) is left at the source version instead. Use this to rule textures out when the game hangs")
+        description="Needed for custom materials, images at a new size, and forking textures "
+                    "several slots share. Off = the archive gains no texture entries and those textures "
+                    "stay at the source version; only useful to rule new textures out when a mod hangs")
     export_materials: BoolProperty(
         name="Export materials + textures", default=True,
-        description="Also write the material records and any texture you edited, chained onto "
-                    "the file this export just produced. Turn off for geometry only.")
+        description="Writes material records and edited textures after the geometry; needed for any "
+                    "recolor or custom material. Off = geometry only (every slot keeps the source "
+                    "character's material); only useful to find out whether materials make a mod hang")
 
     @staticmethod
     def _source_from_scene(context):
@@ -1839,15 +1844,18 @@ class ExportPunchOut(bpy.types.Operator, ExportHelper):
             col.label(text="Base ready: %s" % os.path.basename(self.source_dict), icon="CHECKMARK")
         else:
             col.label(text="Import a character to fill this automatically", icon="INFO")
-        col.prop(self, "bake_colors")
-        sub = col.column(); sub.enabled = self.bake_colors
+        col.prop(self, "write_skeleton")
+        col.separator()
+        box = col.box()
+        box.prop(self, "bake_colors")
+        sub = box.column(); sub.enabled = self.bake_colors
         sub.prop(self, "shade_floor")
         sub.prop(self, "neutralize_lighting")
         col.separator()
-        col.prop(self, "write_skeleton")
-        col.separator()
-        col.prop(self, "export_materials")
-        sub2 = col.column(); sub2.enabled = self.export_materials
+        box = col.box()
+        box.label(text="Materials", icon="MATERIAL")
+        box.prop(self, "export_materials")
+        sub2 = box.column(); sub2.enabled = self.export_materials
         sub2.prop(self, "allow_new_textures")
 
     def execute(self, context):

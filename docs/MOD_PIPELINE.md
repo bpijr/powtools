@@ -155,10 +155,11 @@ and vertex colours on the right vertices.
 
 ## Notes
 
-- **Color bake**: recolors the ramp of each slot whose material is a plain Blender material, from
-  its Base Color. "Shading floor" controls how dark the unlit end gets (higher = flatter).
-  Imported materials you left alone are never baked, and edited ones go through the material
-  export instead. Turn baking off to keep the source character's textures.
+- **Flat Base Color (quick recolor)**: recolors the ramp of each slot whose material is a plain
+  Blender material, from its Base Color. "Shading floor" controls how dark the unlit end gets
+  (higher = flatter). Imported materials and Custom materials are never baked; they go through the
+  material export. "Neutralize lighting maps" (off by default) also greys out the baked slots'
+  rim/gloss/spec maps, which makes those parts flatter than the game would draw them.
 - **Shared textures**: the exporter forks a shared texture before changing it, so a material you
   author does not recolor another slot that happens to reference the same source texture.
 - **Everything not mapped** is zeroed, so none of the original character's geometry shows through.
