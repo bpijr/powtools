@@ -2314,14 +2314,27 @@ class PO_OT_make_custom_material(bpy.types.Operator):
         except Exception as ex:
             self.report({"ERROR"}, str(ex))
             return {"CANCELLED"}
+        # Rename UV map to "UV" if it isn't already, so the TexGen group and exporter can find it.
+        uvs = obj.data.uv_layers
+        renamed = None
+        if uvs.get("UV") is None and len(uvs):
+            layer = next((l for l in uvs if l.active_render), uvs[0])
+            renamed = layer.name
+            layer.name = "UV"
         # Faces retain their assignments, so one action converts a whole cap/shirt/skin material.
         replaced = 0
         for i, candidate in enumerate(obj.data.materials):
             if candidate == old:
                 obj.data.materials[i] = mat
                 replaced += 1
-        self.report({"INFO"}, "Created '%s' for slot %d from '%s' (%d slot(s) replaced)"
-                    % (mat.name, self.slot, old.name, replaced))
+        msg = ("Created '%s' for slot %d from '%s' (%d slot(s) replaced)"
+               % (mat.name, self.slot, old.name, replaced))
+        if renamed:
+            msg += "; renamed UV map '%s' to 'UV'" % renamed
+        elif not len(uvs):
+            self.report({"WARNING"}, msg + "; mesh has no UV map, texture will be one colour")
+            return {"FINISHED"}
+        self.report({"INFO"}, msg)
         return {"FINISHED"}
 
     def invoke(self, context, event):

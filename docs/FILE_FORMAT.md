@@ -242,7 +242,7 @@ Material records (`MaterialData 0xB016`, 204 B each in the supported preset) exp
 slots (detail/damage/spec-mask/cell-ramp/rimlight-ramp/gloss/fresnel/spec-ramp), a spec power,
 render switches and an outline colour. Every field is named by the shader's own parameter
 table; see **`MATERIALS.md`**. Editor: `nlg_material.py`. To recolor a surface, edit its cell
-ramp (slot 3); `+0x9C` is the outline colour, not a tint.
+ramp (slot 3); `+0x9C` (`outlinecolour`) is not a tint.
 
 ## 6. Textures (`nlg_texture.py`)
 

@@ -666,6 +666,13 @@ class PO_PT_fighter_damage(_Panel, bpy.types.Panel):
 
     def body(self, context, col, doc, asset, profile):
         col.row().prop(context.scene, "po_material_state", expand=True)
+        for which, prop in (("FACE", "po_damage_face"), ("BODY", "po_damage_body")):
+            col.prop(context.scene, prop, slider=True)
+            row = col.row(align=True)
+            for level in (0.0, 0.25, 0.5, 0.75, 1.0):
+                op = row.operator("po.damage_step", text="%d%%" % int(level * 100),
+                                  depress=abs(getattr(context.scene, prop) - level) < 1e-4)
+                op.which, op.level = which, level
         keys = next((o.data.shape_keys for o in po_scene.asset_objects(context.scene, asset)
                      if o.type == "MESH" and o.data.shape_keys is not None), None)
         hurt = json.loads(keys["po_hurt_keys"]) if keys is not None and keys.get("po_hurt_keys") else []

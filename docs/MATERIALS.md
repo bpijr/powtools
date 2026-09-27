@@ -52,8 +52,8 @@ by the game each frame; editing them does nothing.
 | `+0x8C` | `antialias` | bool | 0 on every fighter |
 | `+0x90` | `rimlight` | bool | rim stage on/off |
 | `+0x94` | `additiverimlight` | bool | rim added vs multiplied |
-| `+0x98` | `enabledamagetexture` | 0/1/2 | damage stage (technique 3/4) |
-| `+0x9C` | `outlinecolour` | RGBA f32 | **the outline colour, not a lighting tint** |
+| `+0x98` | `enabledamagetexture` | 0/1/2 | damage stage (technique 3/4): 1 fades with `damagelevelhigh`, 2 with `damagelevellow` |
+| `+0x9C` | `outlinecolour` | RGBA f32 | named outlinecolour; **not a lighting tint**, and not what the outline pass draws (see below) |
 | `+0xAC` | `damagelevellow` | runtime | |
 | `+0xB0` | `enableenvmap` | bool | gloss sphere-map stage (technique 2/4) |
 | `+0xB4` / `+0xB8` | `envmaphorizscale` / `envmapvertscale` | f32 | sphere-map scale |
@@ -63,7 +63,15 @@ by the game each frame; editing them does nothing.
 | `+0xC8` | `damagelevelhigh` | runtime | |
 
 Earlier versions of this page called `+0x9C` a "tint" and `+0xA8` "alpha"; `+0xA8` is the alpha
-component of `outlinecolour`. The exporter still stores the record verbatim for untouched
+component of `outlinecolour`. The fighter outline pass (draw `8010BEA4`, when `normalextension > 0`)
+takes its colour from the DefaultOutlineColour tweak (0.13 grey), or FEOutlineColour when
+`usefeoutlinecolour` is set, not from this field. What reads `+0x9C` is still open.
+
+**Damage levels.** `damagelevelhigh` and `damagelevellow` are written every frame by `800BFF9C`:
+high is the sum of three per-character damage values (the face: black eyes, cheek, lip, nose
+marks use flag 1), low is a fourth (body welts use flag 2). The stage adds
+`mix(1, damage, K1)` with `K1 = 255 × level`. The sidebar's **Face damage** and **Body damage**
+sliders (Normal / Hurt panel) set these for the preview; Normal/Hurt sets both to 0 or 1. The exporter still stores the record verbatim for untouched
 materials, so nothing that was already exported is affected. Which of these flags change a
 fighter in game has not been tested one by one yet.
 
@@ -158,7 +166,9 @@ template already sits in the range the game's own art occupies.
 Every fighter material is built from two shared node groups, transcribed from the executable
 (symbolic execution of the draw functions; see the decomp notes above):
 
-- **PO Skin TexGen** — geometry in, the texture coordinates GX generates out: UV0/1/2, the
+- **PO Skin TexGen** — geometry in, the texture coordinates GX generates out, per vertex like the
+  hardware (a geometry-nodes modifier stores the vertex normal as `gx_nw`; Blender 4.2+ only,
+  older versions fall back to per-pixel normals): UV0/1/2, the
   half-Lambert ramp coordinate `0.5·N·L + 0.5`, specular `N·H` with row `specpower/128`, fresnel,
   rim (`Nz/2, (1 − Ny)/2`) and the sphere map. All in GX view space.
 - **PO Skin TEV** — the sampled textures and the record's switches in, the TEV stages out:
@@ -195,8 +205,11 @@ automatically (flip `PO_*Source` back to 0 to compare). Shared textures such as
 `global/specramp` load from `global.dict`: import once from the extracted dump in a session, or
 set `PO_ART_ROOT`, before importing a mod stored elsewhere.
 
-The default light is the opponent's in-bout light, normalize(−2.5, −3.65, 1.0), which matches
-Dolphin footage of Glass Joe; cutscenes use (2.5, 3.65, 1.0). Two TEV constants are calibrated
+The character light is written by `scripts/flow`, whose constant pool holds both values the game
+uses: (−0.5, 2.0, 3.5) in bouts and (2.5, 3.65, 1.0) in cutscenes, confirmed by reading RAM from
+Dolphin savestates of a Soda Popinski bout and a Glass Joe cutscene. The two characters get
+(x, y, z) and (−x, −y, z); the default is the opponent's bout light, normalize(0.5, −2.0, 3.5),
+which matches Dolphin footage of Glass Joe. Two TEV constants are calibrated
 against retail footage rather than decoded, and are separate group inputs so they stay visible:
 the rim constant (1/4) and the gloss level scale (0). The old fitted gain, lift and glow values
 are gone.

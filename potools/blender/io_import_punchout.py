@@ -506,6 +506,14 @@ def do_import(dict_path, do_anims=True, anim_filter="", do_textures=True, do_out
                 add_outline(obj)
             except Exception as ex:
                 print("PunchOut: outline step skipped:", ex)
+        # Per-vertex normals for the shader's texture-coordinate generators (see PO Skin
+        # TexGen). Needs Blender 4.2+ geometry nodes; older versions shade per pixel.
+        if bpy.app.version >= (4, 2, 0):
+            try:
+                import po_gx
+                po_gx.ensure_world_normals(obj)
+            except Exception as ex:
+                print("PunchOut: per-vertex normals skipped:", ex)
 
     # ---- animations -> actions (NLA strips) ----
     # Actions go through po_action: legacy Action.fcurves before 4.4, slots/channelbags after.
@@ -945,8 +953,8 @@ def _ensure_damage_uv_layer(obj):
 def _ensure_damage_mix(mat, show):
     """Migrate a direct slot-1 multiply to a white-vs-damage Normal/Hurt switch."""
     if (not mat.get("po_damage_mesh") or not mat.use_nodes or
-            mat.node_tree is None):
-        return None
+            mat.node_tree is None or mat.node_tree.nodes.get("PO_TEV") is not None):
+        return None     # TEV-group graphs take the damage level directly (po_set_damage)
     nt = mat.node_tree
     damage = nt.nodes.get("PO_Damage")
     if damage is None:
@@ -1009,7 +1017,36 @@ def _po_update_show_damage(self, context):
         _apply_hurt_keys(obj, show)
     for mat in bpy.data.materials:
         _ensure_damage_mix(mat, show)
+    level = 1.0 if show else 0.0
+    scene = context.scene
+    if (scene.po_damage_face, scene.po_damage_body) != (level, level):
+        scene.po_damage_face = scene.po_damage_body = level   # their update applies the levels
+    else:
+        po_shader.po_set_damage(level, level)
     context.view_layer.update()
+
+
+def _po_update_damage_levels(self, context):
+    """Face/body damage sliders: the game's damagelevelhigh / damagelevellow."""
+    po_shader.po_set_damage(context.scene.po_damage_face, context.scene.po_damage_body)
+
+
+class PO_OT_damage_step(bpy.types.Operator):
+    """Set a damage level (face = flag-1 materials, body = flag-2 materials)"""
+    bl_idname = "po.damage_step"
+    bl_label = "Set Damage Level"
+    bl_options = {"REGISTER", "UNDO"}
+
+    which: EnumProperty(items=(("FACE", "Face", ""), ("BODY", "Body", ""), ("BOTH", "Both", "")),
+                        default="BOTH")
+    level: bpy.props.FloatProperty(default=0.0, min=0.0, max=1.0)
+
+    def execute(self, context):
+        if self.which in ("FACE", "BOTH"):
+            context.scene.po_damage_face = self.level
+        if self.which in ("BODY", "BOTH"):
+            context.scene.po_damage_body = self.level
+        return {"FINISHED"}
 
 
 def _po_update_material_state(self, context):
@@ -1114,6 +1151,17 @@ def register():
     bpy.utils.register_class(PO_RETOOL_OT_auto_weight)
     bpy.utils.register_class(PO_RETOOL_OT_transfer_weights)
     bpy.utils.register_class(PO_OT_cycle_material)
+    bpy.utils.register_class(PO_OT_damage_step)
+    bpy.types.Scene.po_damage_face = bpy.props.FloatProperty(
+        name="Face damage", min=0.0, max=1.0, default=0.0, subtype="FACTOR",
+        description="damagelevelhigh: fades in the slot-1 artwork of materials with "
+                    "enabledamagetexture = 1 (black eyes, cheek and lip marks)",
+        update=_po_update_damage_levels)
+    bpy.types.Scene.po_damage_body = bpy.props.FloatProperty(
+        name="Body damage", min=0.0, max=1.0, default=0.0, subtype="FACTOR",
+        description="damagelevellow: fades in the slot-1 artwork of materials with "
+                    "enabledamagetexture = 2 (body welts)",
+        update=_po_update_damage_levels)
     # Repair already-open imports and upgrade decoded slot-1 material graphs. At startup the
     # add-on sees a restricted context without a scene, so wait until one exists.
     bpy.app.timers.register(_repair_open_imports, first_interval=0.1)
@@ -1140,9 +1188,17 @@ def _preview_edited_ramps(scene, depsgraph=None):
 
 
 def _repair_open_imports():
-    if getattr(bpy.context, "scene", None) is None:
+    scene = getattr(bpy.context, "scene", None)
+    if scene is None:
         return 0.5
-    _po_update_show_damage(None, bpy.context)
+    show = bool(scene.po_show_damage)
+    for obj in bpy.data.objects:
+        _disable_legacy_hurt_mask(obj)
+        _ensure_damage_uv_layer(obj)
+    for mat in bpy.data.materials:
+        _ensure_damage_mix(mat, show)
+    # the saved sliders win over the Normal/Hurt toggle, which only sets them when clicked
+    po_shader.po_set_damage(scene.po_damage_face, scene.po_damage_body)
     return None
 
 
@@ -1154,6 +1210,9 @@ def unregister():
     bpy.types.TOPBAR_MT_file_import.remove(menu_func)
     del bpy.types.Scene.po_material_state
     del bpy.types.Scene.po_show_damage
+    del bpy.types.Scene.po_damage_body
+    del bpy.types.Scene.po_damage_face
+    bpy.utils.unregister_class(PO_OT_damage_step)
     bpy.utils.unregister_class(PO_OT_cycle_material)
     bpy.utils.unregister_class(PO_RETOOL_OT_transfer_weights)
     bpy.utils.unregister_class(PO_RETOOL_OT_auto_weight)

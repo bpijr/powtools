@@ -76,10 +76,32 @@ def po_set_albedo_lift(value):
     return n
 
 
+# Live damage levels by enabledamagetexture flag: 1 = face (damagelevelhigh, the sum of three
+# head-damage values), 2 = body (damagelevellow). 0..1, clamped like the game's K1.
+DAMAGE_LEVELS = {1: 0.0, 2: 0.0}
+
+
+def po_set_damage(face=None, body=None):
+    """Set the preview damage levels and push them into every material's TEV group."""
+    if face is not None:
+        DAMAGE_LEVELS[1] = max(0.0, min(1.0, float(face)))
+    if body is not None:
+        DAMAGE_LEVELS[2] = max(0.0, min(1.0, float(body)))
+    n = 0
+    for m in bpy.data.materials:
+        nt = m.node_tree if m.use_nodes else None
+        tev = nt.nodes.get("PO_TEV") if nt else None
+        if tev is None or nt.nodes.get("PO_Damage") is None:
+            continue
+        tev.inputs["Damage Level"].default_value = DAMAGE_LEVELS.get(int(m.get("po_damage_flag", 1)), 0.0)
+        n += 1
+    return n
+
+
 def po_show_damage(show=True):
     """Switch slot-1 damage artwork without hiding its replacement geometry."""
-    n = 0
-    for nd in _po_nodes("PO_DamageMix"):
+    n = po_set_damage(1.0 if show else 0.0, 1.0 if show else 0.0)
+    for nd in _po_nodes("PO_DamageMix"):          # graphs built before the TEV groups
         nd.inputs[0].default_value = 1.0 if show else 0.0; n += 1
     # Optional overlays (DK's forehead bandage) genuinely disappear in Normal. Required
     # cheek/lip/torso replacement geometry never receives this node.
@@ -200,14 +222,15 @@ def _po_vec(nt, op, loc):
 # be told apart from what the executable says.
 # ---------------------------------------------------------------------------------------
 
-SKIN_GROUP_VERSION = 3
+SKIN_GROUP_VERSION = 5
 TEXGEN_GROUP = "PO Skin TexGen"
 TEV_GROUP = "PO Skin TEV"
-# Character light: normalize(80412D54), set by the presentation script to (2.5, 3.65, 1.0);
-# the other character gets (-x, -y, z). The mirrored one matches the opponent in a bout (checked
-# against Dolphin footage of Glass Joe), so it is the default.
+# Character light: normalize(80412D54), written by scripts/flow. Its constant pool holds both
+# values: (2.5, 3.65, 1.0) for presentation/cutscenes (live RAM, Glass Joe NIS savestate) and
+# (-0.5, 2.0, 3.5) for bouts (live RAM, Soda Popinski bout savestate). The two characters get
+# (x, y, z) and (-x, -y, z); the mirrored bout light matches Dolphin footage of the opponent.
 CHAR_LIGHT = tuple(Vector((2.5, 3.65, 1.0)).normalized())
-BOUT_LIGHT = tuple(Vector((-2.5, -3.65, 1.0)).normalized())
+BOUT_LIGHT = tuple(Vector((0.5, -2.0, 3.5)).normalized())
 RIM_CONSTANT = 0.25        # po_gx.RIM_LIGHT_KSEL 1/4: calibrated, the executable reads K0
 ENV_LEVEL_SCALE = 0.0      # po_gx.ENV_MAP_LEVEL_SCALE: calibrated, the executable reads 1
 # hippodiffuseskin record offsets (the shader's own parameter table, 8033B270)
@@ -381,11 +404,20 @@ def _build_texgen(ng):
     g.at(-4)
     gi = g.new("NodeGroupInput")
     g.at(-3, "View space (GX TEXMTX0: normal matrix; +Z toward the viewer)")
+    # GX generates texture coordinates per VERTEX and the rasteriser interpolates them. Every
+    # generator here is affine in N, so interpolating the vertex-normalised normal and NOT
+    # renormalising per pixel reproduces that exactly. gx_nw is that normal (per corner, world
+    # space), written by po_gx's geometry-nodes modifier; without it (Blender < 4.2 or an object
+    # that lacks the modifier) the per-pixel normal is used instead.
     geo = g.new("ShaderNodeNewGeometry")
+    attr = g.new("ShaderNodeAttribute", "gx_nw: per-vertex normal", attribute_type="GEOMETRY",
+                 attribute_name="gx_nw")
+    have = g.math("GREATER_THAN", g.vmath("LENGTH", attr.outputs["Vector"]), 0.5, label="gx_nw present?")
+    nw = g.lerp(geo.outputs["Normal"], attr.outputs["Vector"], have, "per-vertex if present")
     vt = g.new("ShaderNodeVectorTransform", "normal: world to camera", vector_type="VECTOR",
                convert_from="WORLD", convert_to="CAMERA")
-    g.link(geo.outputs["Normal"], vt.inputs[0])
-    n = g.vmath("NORMALIZE", g.vmath("MULTIPLY", vt.outputs[0], (1.0, 1.0, -1.0), "flip Z"), label="N")
+    g.link(nw, vt.inputs[0])
+    n = g.vmath("MULTIPLY", vt.outputs[0], (1.0, 1.0, -1.0), "N (flip Z; not renormalised)")
     lt = g.new("ShaderNodeVectorTransform", "light: world to camera", vector_type="VECTOR",
                convert_from="WORLD", convert_to="CAMERA")
     g.link(gi.outputs["Light"], lt.inputs[0])
@@ -536,17 +568,16 @@ def po_build_shader(m, cfg):
     if cfg.get("detail") is not None:
         d = img("PO_Detail", cfg["detail"], "UV0", 600, label="slot 0 detail (albedo)")
         L.new(d.outputs["Color"], tv.inputs["Detail"]); L.new(d.outputs["Alpha"], tv.inputs["Detail Alpha"])
-    # Slot 1 is the bruise/black-eye artwork: technique 3 multiplies mix(1, damage, level) in.
+    # Slot 1 is the bruise/black-eye artwork. enabledamagetexture (+0x98) selects technique 3,
+    # which multiplies mix(1, damage, K1) in; K1 = 255 x damagelevelhigh for flag 1 and
+    # damagelevellow for flag 2 (80109B1C). Both are runtime values; po_set_damage sets them.
     damage_img = cfg.get("damage")
+    flag = int(params["enabledamagetexture"])
+    m["po_damage_flag"] = flag
     if damage_img is not None and not isinstance(damage_img, bool):
         dt = img("PO_Damage", damage_img, "UV1 (damage)", 400, label="slot 1 damage")
-        dm = N.new("ShaderNodeMixRGB"); dm.location = (-800, 400)
-        dm.name = "PO_DamageMix"; dm.label = "Normal / Hurt"
-        dm.inputs[0].default_value = 1.0 if SHOW_DAMAGE else 0.0
-        dm.inputs[1].default_value = (1.0, 1.0, 1.0, 1.0)
-        L.new(dt.outputs["Color"], dm.inputs[2])
-        L.new(dm.outputs[0], tv.inputs["Damage"])
-        tv.inputs["Damage Level"].default_value = 1.0
+        L.new(dt.outputs["Color"], tv.inputs["Damage"])
+        tv.inputs["Damage Level"].default_value = DAMAGE_LEVELS.get(flag, 0.0) if flag else 0.0
     if cfg.get("specmask") is not None:
         s = img("PO_SpecMask", cfg["specmask"], "UV2 (spec mask)", 200, label="slot 2 spec mask")
         L.new(s.outputs["Color"], tv.inputs["Spec Mask"])
@@ -1035,6 +1066,7 @@ def build_materials_from_archive(archive, hashnames, image_factory, global_archi
         tint = tuple(_struct.unpack_from(">fff", matdata, matoff + 0x9C))
         alpha = _struct.unpack_from(">f", matdata, matoff + 0xA8)[0]
         specp = _struct.unpack_from(">f", matdata, matoff + 0x84)[0]
+        flag = _struct.unpack_from(">I", matdata, matoff + 0x98)[0] if matoff + 0x9C <= len(matdata) else 0
 
         low = (matname or "").lower()
         is_optional_damage = any(k in low for k in OPTIONAL_DAMAGE_NAME_HINTS)
@@ -1053,7 +1085,7 @@ def build_materials_from_archive(archive, hashnames, image_factory, global_archi
             ramp=_stops(ramp_h),
             ramp_image=_ramp_img(ramp_h),
             detail=(_img(detail_h) if detail_h in textbl else None),
-            damage=(_img(hs[1]) if is_hurt and hs[1] in textbl else None),
+            damage=(_img(hs[1]) if (flag or is_hurt) and hs[1] in textbl else None),
             specmask=(_img(hs[2]) if hs[2] in textbl else None),
             rim=(_stops(rim_h) if rim_h in textbl else None),
             rim_image=(_preview_img(rim_h) if rim_h in textbl else None),
