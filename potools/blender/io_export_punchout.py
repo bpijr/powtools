@@ -2727,6 +2727,7 @@ def po_export_materials(obj, dict_path, out_path=None, prefix=None, ramp_size=(1
         return h2
 
     records, order, names_by_rec = [], {}, {}
+    images_written = {}     # image fingerprint -> texture hash written earlier in this export
     for si, mat in enumerate(material_list):
         if is_decoration_material(mat):
             continue        # PO_Outline et al: viewport only, no record belongs in the archive
@@ -2778,9 +2779,16 @@ def po_export_materials(obj, dict_path, out_path=None, prefix=None, ramp_size=(1
                 if str(nm).startswith("#"):
                     nm = base + suffix
                 if is_img:
+                    # The same image on several materials becomes one texture, not one copy each:
+                    # eleven head slots sharing a face map used to add ~1 MB to the archive.
+                    key = po_shader.fp_image(nd.image)
+                    if key in images_written:
+                        slots[slot] = images_written[key]
+                        return
                     rgba, w, h = po_shader.image_to_rgba(nd.image)
                     slots[slot] = _put(nm, lambda _w, _h: rgba, w, h, resizable=False,
                                        fork_name=base + suffix)
+                    images_written[key] = slots[slot]
                 else:
                     slots[slot] = _put(nm, lambda w, h: po_shader.ramp_to_rgba(nd, w, h), rw, rh,
                                        resizable=True, fork_name=base + suffix)
