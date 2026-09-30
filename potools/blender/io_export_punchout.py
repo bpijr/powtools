@@ -691,6 +691,7 @@ def read_scene_buckets(armature, mesh_objs, resolve, fallback_hash, nearest_bone
 
     buckets = {}
     slot_color = {}
+    claims = {}     # slot -> (material, object) for the one-material-per-slot check
     stats = {"fallback_verts": 0, "dropped_groups": set(), "image_materials": set(),
              "material_slots": set(), "untouched_slots": set()}
 
@@ -753,12 +754,24 @@ def read_scene_buckets(armature, mesh_objs, resolve, fallback_hash, nearest_bone
             if not mesh.materials:
                 raise RuntimeError(f"Object '{obj.name}' has no materials.")
             mat_slots = []
-            for m in mesh.materials:
+            used = {p.material_index for p in mesh.polygons}
+            for mi, m in enumerate(mesh.materials):
                 if is_decoration_material(m):
                     mat_slots.append(None)          # skipped, not exported
                     continue
                 s = slot_for_material(m)
                 mat_slots.append(s)
+                # A slot has ONE material record. Two different materials on it used to export
+                # the geometry of both under whichever record won, so a custom face texture
+                # shipped as the nostril texture. Refuse and name both.
+                if mi in used:
+                    other = claims.setdefault(s, (m.name, obj.name))
+                    if other[0] != m.name:
+                        raise RuntimeError(
+                            f"Slot {s} is claimed by two materials: '{other[0]}' on '{other[1]}' and "
+                            f"'{m.name}' on '{obj.name}'. A slot holds one material. Give '{m.name}' a "
+                            f"slot nothing else uses (fold that slot's faces into another material "
+                            f"first), or assign the same material to both parts.")
                 slot_color.setdefault(s, material_color(m))
                 if base_color_is_image(m):
                     stats["image_materials"].add(m.name)

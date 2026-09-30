@@ -95,16 +95,20 @@ gunmetal gloves and boots, gold trim, and hand-painted trunks.
    Principled BSDF node's Base Color**. UV-map it normally; seams are fine, since the exporter
    splits vertices wherever UVs differ. Keep the texture opaque and use dimensions divisible by 8
    where possible (for example 256×256 or 512×512).
-2. Choose the target mesh slot with **List source slots**. It can be the slot this part already
-   uses (Iron Joe's trunks stay on slot 9) or an unused one. This is only a geometry/bone
-   allocation: its old material will be replaced, not reused.
+2. Choose the target mesh slot with **List source slots**. A slot holds exactly one material, and
+   fighters ship with no spare slots, so the custom material must **replace** a slot's material:
+   - the slot the part already uses (Iron Joe's trunks stay on slot 9), or
+   - a slot you free first, by giving all its faces another material.
+
+   Everything left on that slot (its faces, and any object you added to it) wears the new
+   material. If two different materials claim one slot, export stops and names both.
+
 3. Make the material active and press PO Tools ▸ Material editor ▸ **Custom material**. (F3 search
    only finds it with Preferences ▸ Interface ▸ Developer Extras turned on.)
 
    ![Custom material button](img/mod_pipeline/06a_custom_button.png)
 
    In the dialog, set:
-
    - **Target slot** to the selected slot;
    - **Material name** to something you'll recognize;
    - **Surface response** to `cloth`, `skin`, `boot`, `metal`, etc.; and
