@@ -1832,6 +1832,25 @@ def do_export(source_dict, out_dict, bake_colors=True, shade_floor=1.0, neutrali
 # ===========================================================================
 # operators + menu
 # ===========================================================================
+# Fighter export options, shared by this operator and the File > Export menu's
+# export_scene.punchout_any (io_punchout_ui), which reuses these property definitions.
+def draw_fighter_options(layout, op):
+    col = layout.column()
+    col.prop(op, "write_skeleton")
+    col.separator()
+    box = col.box()
+    box.prop(op, "bake_colors")
+    sub = box.column(); sub.enabled = op.bake_colors
+    sub.prop(op, "shade_floor")
+    sub.prop(op, "neutralize_lighting")
+    col.separator()
+    box = col.box()
+    box.label(text="Materials", icon="MATERIAL")
+    box.prop(op, "export_materials")
+    sub = box.column(); sub.enabled = op.export_materials
+    sub.prop(op, "allow_new_textures")
+
+
 class ExportPunchOut(bpy.types.Operator, ExportHelper):
     bl_idname = "export_scene.punchout_mod"
     bl_label = "Export Punch-Out!! Mod"
@@ -1912,19 +1931,7 @@ class ExportPunchOut(bpy.types.Operator, ExportHelper):
             col.label(text="Base ready: %s" % os.path.basename(self.source_dict), icon="CHECKMARK")
         else:
             col.label(text="Import a character to fill this automatically", icon="INFO")
-        col.prop(self, "write_skeleton")
-        col.separator()
-        box = col.box()
-        box.prop(self, "bake_colors")
-        sub = box.column(); sub.enabled = self.bake_colors
-        sub.prop(self, "shade_floor")
-        sub.prop(self, "neutralize_lighting")
-        col.separator()
-        box = col.box()
-        box.label(text="Materials", icon="MATERIAL")
-        box.prop(self, "export_materials")
-        sub2 = box.column(); sub2.enabled = self.export_materials
-        sub2.prop(self, "allow_new_textures")
+        draw_fighter_options(col, self)
 
     def execute(self, context):
         if not self.source_dict:

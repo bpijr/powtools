@@ -368,6 +368,11 @@ class PO_OT_review(bpy.types.Operator):
         self.report({"INFO"}, value["headline"]); return {"FINISHED"}
 
 
+def _fighter_option(name):
+    import io_export_punchout
+    return io_export_punchout.ExportPunchOut.__annotations__[name]
+
+
 class PO_OT_export_any(bpy.types.Operator, ExportHelper):
     """Export the active Punch-Out!! asset to a new external file"""
     bl_idname = "export_scene.punchout_any"
@@ -375,12 +380,13 @@ class PO_OT_export_any(bpy.types.Operator, ExportHelper):
     filename_ext = ".dict"
     filter_glob: StringProperty(default="*.dict", options={"HIDDEN"})
     asset: StringProperty(default="", options={"HIDDEN"})
-    bake_colors: BoolProperty(name="Bake material colors into ramps", default=True)
-    shade_floor: FloatProperty(name="Shading floor", default=1.0, min=0.0, max=1.0)
-    neutralize_lighting: BoolProperty(name="Neutralize lighting maps", default=True)
-    write_skeleton: BoolProperty(name="Write bind joint positions (skeleton)", default=True)
-    export_materials: BoolProperty(name="Export materials + textures", default=True)
-    allow_new_textures: BoolProperty(name="Allow new textures", default=True)
+    # One definition of the fighter options: io_export_punchout's (names, defaults, tooltips).
+    bake_colors: _fighter_option("bake_colors")
+    shade_floor: _fighter_option("shade_floor")
+    neutralize_lighting: _fighter_option("neutralize_lighting")
+    write_skeleton: _fighter_option("write_skeleton")
+    export_materials: _fighter_option("export_materials")
+    allow_new_textures: _fighter_option("allow_new_textures")
 
     def _resolve(self, context):
         doc = po_scene.document(context.scene)
@@ -405,8 +411,8 @@ class PO_OT_export_any(bpy.types.Operator, ExportHelper):
         col.label(text="Target: a new external file")
         _draw_review(col, doc, asset)
         if asset["kind"] == "fighter":
-            box = col.box()
-            for name in FIGHTER_OPTIONS: box.prop(self, name)
+            import io_export_punchout
+            io_export_punchout.draw_fighter_options(col, self)
 
     def execute(self, context):
         doc, asset = self._resolve(context)
