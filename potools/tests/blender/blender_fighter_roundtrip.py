@@ -204,7 +204,19 @@ def fighter(path, tmp):
     edited = tmp / path.stem / "edited" / "art" / "characters" / (path.stem + ".dict")
     exporter.do_export(str(path), str(edited))
     assert chunk_diff(noop, edited) & {0xB00A, 0x8010} == {0xB00A, 0x8010}
-    assert not {t for t in chunk_diff(path, edited) if 0x7000 <= t < 0x8000}, "local joint edit rewrote clips"
+    clip_chunks = {t for t in chunk_diff(path, edited) if 0x7000 <= t < 0x8000}
+    assert clip_chunks <= {0x7102}, ["%04X" % t for t in clip_chunks]   # rotations, headers untouched
+    # A node that takes its translation from the clips must carry the joint edit there too:
+    # every track keeps the same offset from 0x8010 it had in the source.
+    hb = str(path.parents[1] / "hashid.bin")
+    r0, r1 = nlg_anim2.Rig(str(path), hb), nlg_anim2.Rig(str(edited), hb)
+    order = [n for n in range(1, r0.nn) if r0.tflag[n] == 0]
+    for name, (fr, _rot, trn, _t3) in r0.anims.items():
+        trn1 = r1.anims[name][2]
+        for k, n in enumerate(order[1:], 1):        # order[0] is the WORLD root track
+            a0, a1 = r0.decode_trn(trn[k], fr)[0], r1.decode_trn(trn1[k], fr)[0]
+            want = [a0[i] - r0.loff[n][i] + r1.loff[n][i] for i in range(3)]
+            assert close(a1, want), (name, r0.names[n], a1, want)
     # The exported archive imports again with every clip in the same Blender.
     bpy.ops.wm.read_factory_settings(use_empty=True)
     arm2, obj2 = importer.do_import(str(noop), do_anims=True)

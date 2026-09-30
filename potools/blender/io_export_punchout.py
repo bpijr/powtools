@@ -524,6 +524,56 @@ def retarget_root_motion(a, delta, tol=1e-6):
     return n, len(runs)
 
 
+def node_offsets(a):
+    """Every node's LOCAL offset (0x8010) as a list of (x, y, z), or None."""
+    g = _node_chunks(a)
+    if 0x8010 not in g:
+        return None
+    d = a.get_chunk_bytes(g[0x8010])
+    return [struct.unpack_from(">3f", d, n * 12) for n in range(len(d) // 12)]
+
+
+def retarget_bone_tracks(a, before, after, tol=1e-6):
+    """Shift the translation tracks of every moved node that HAS one.
+
+    A node whose 0x8011 flag is 0 takes its local translation from the animation, not from
+    0x8010, so moving the bone in Blender changes nothing in-game: every clip keeps commanding
+    the original position. Mr. Sandman's face_eye_l/r are such nodes -- move the eyeballs into
+    new sockets and the game drags them back to Sandman's (closer together, deeper), which reads
+    as cross-eyed. Adding the offset delta to each track keeps the clip's motion on the new rest.
+
+    The root (node 1, WORLD space) is retarget_root_motion's job and is skipped here.
+    Returns (tracks_rewritten, [node indices shifted]).
+    """
+    g = _node_chunks(a)
+    if before is None or after is None or 0x8011 not in g:
+        return 0, []
+    tflag = list(a.get_chunk_bytes(g[0x8011]))
+    deltas = {}
+    for n in range(2, min(len(before), len(after), len(tflag))):
+        d = tuple(after[n][k] - before[n][k] for k in range(3))
+        if tflag[n] == 0 and max(abs(v) for v in d) > tol:
+            deltas[n] = d
+    if not deltas:
+        return 0, []
+    order = [n for n in range(1, len(tflag)) if tflag[n] == 0]    # 0x7102 track -> node
+    count = 0
+    for _name, tracks in _anim_runs(a):
+        for k, ri in enumerate(tracks):
+            if k >= len(order) or order[k] not in deltas:
+                continue
+            d = bytearray(a.get_chunk_bytes(ri))
+            if len(d) % 12:
+                continue
+            dx, dy, dz = deltas[order[k]]
+            for f in range(len(d) // 12):
+                x, y, z = struct.unpack_from(">3f", d, f * 12)
+                struct.pack_into(">3f", d, f * 12, x + dx, y + dy, z + dz)
+            a.replace_chunk(ri, bytes(d))
+            count += 1
+    return count, sorted(deltas)
+
+
 def is_decoration_material(mat):
     """Viewport-only materials the importer adds, which must never reach the exporter.
 
@@ -1559,7 +1609,12 @@ def do_export(source_dict, out_dict, bake_colors=True, shade_floor=1.0, neutrali
         # where skinning joints sit. Both must agree.
         root_node = anim_root_node(a)
         root_before = node_offset(a, root_node)
+        offs_before = node_offsets(a)
         nwrote, nnote = write_node_offsets(a, armature)
+        ntk, tnodes = retarget_bone_tracks(a, offs_before, node_offsets(a))
+        if ntk:
+            report.append("animated bone positions moved with the rig: %d track(s) on node(s) %s"
+                          % (ntk, tnodes))
         if nwrote:
             report.append("node offsets (proportions) updated for %d bone(s): %s%s"
                           % (len(nwrote), nwrote[:6], " ..." if len(nwrote) > 6 else ""))
